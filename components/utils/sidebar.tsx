@@ -2,73 +2,8 @@ import {
     SidebarHeader, SidebarContent, SidebarGroup, Sidebar, SidebarGroupContent, SidebarMenu,
     SidebarMenuItem, SidebarMenuButton, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton
 } from '@/components/ui/sidebar'
-import {
-    Search, Settings, LayoutDashboard,
-    FileText, FilePlus, FolderOpen, Boxes, ShieldCheck, BarChart3
-} from 'lucide-react'
 import React from 'react'
-
-const sidebarItems = [
-    {
-        title: "Dashboard",
-        url: "/",
-        icon: LayoutDashboard,
-    },
-    {
-        title: "Invoice",
-        url: "#",
-        icon: FileText,
-        subItems: [
-            {
-                title: "New Sale",
-                url: "#",
-                icon: FilePlus,
-            },
-            {
-                title: "All Sales",
-                url: "#",
-                icon: FolderOpen,
-            },
-            {
-                title: "New Purchase",
-                url: "#",
-                icon: FilePlus,
-            },
-            {
-                title: "All Purchases",
-                url: "#",
-                icon: FolderOpen,
-            }
-        ]
-    },
-    {
-        title: "Stock",
-        url: "#",
-        icon: Boxes,
-        subItems: [
-            {
-                title: "Search Stock",
-                url: "/stock/search",
-                icon: Search,
-            },
-            {
-                title: "Stock Audit",
-                url: "#",
-                icon: ShieldCheck,
-            }
-        ]
-    },
-    {
-        title: "Reports",
-        url: "#",
-        icon: BarChart3,
-    },
-    {
-        title: "Settings",
-        url: "#",
-        icon: Settings,
-    },
-];
+import sidebarItems from './sidebar-items';
 
 
 export default function AppSideBar() {
