@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { AppCombobox } from '@/components/utils/appCombobox'
-import { Card, CardHeader, CardTitle, CardFooter, CardContent, CardDescription } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import BarcodeButton from '@/components/utils/BarcodeButton';
 import { Table, TableBody, TableRow, TableCell } from '@/components/ui/table'
 
