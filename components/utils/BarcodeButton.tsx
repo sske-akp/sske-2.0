@@ -10,12 +10,13 @@ export default function BarcodeButton() {
         <Button
             variant="outline"
             size="icon"
-            className="w-[280px] h-[50px] outline-dashed"
             onClick={() => toast("Event has been created.")}
         >
             <div className="flex items-center justify-center">
                 <Camera />
             </div>
+            {/* <span>Barcode Scanner</span> */}
+
         </Button>
     );
 }
