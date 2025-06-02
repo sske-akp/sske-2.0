@@ -7,7 +7,8 @@ import {
     Search,
     ShieldCheck,
     BarChart3,
-    Settings
+    Settings,
+    Magnet
 } from "lucide-react";
 
 
@@ -24,22 +25,22 @@ const sidebarItems = [
         subItems: [
             {
                 title: "New Sale",
-                url: "#",
+                url: "/sales/new",
                 icon: FilePlus,
             },
             {
                 title: "All Sales",
-                url: "#",
+                url: "/sales/all",
                 icon: FolderOpen,
             },
             {
                 title: "New Purchase",
-                url: "#",
+                url: "/purchases/new",
                 icon: FilePlus,
             },
             {
                 title: "All Purchases",
-                url: "#",
+                url: "/purchases/all",
                 icon: FolderOpen,
             }
         ]
@@ -51,7 +52,7 @@ const sidebarItems = [
         subItems: [
             {
                 title: "Search Stock",
-                url: "/stock/search",
+                url: "/stock/all",
                 icon: Search,
             },
             {
@@ -61,6 +62,25 @@ const sidebarItems = [
                 disabled: false
             }
         ]
+    },
+    {
+        title: "Customers",
+        url: "#",
+        icon: Magnet,
+        subItems: [
+            {
+                title: "Search Customers",
+                url: "/customers/all",
+                icon: Search,
+            },
+            {
+                title: "New Customer",
+                url: "#",
+                icon: ShieldCheck,
+                disabled: false
+            }
+        ]
+
     },
     {
         title: "Reports",

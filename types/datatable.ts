@@ -14,3 +14,9 @@ export interface DataTableToolbarFilterItem {
   value: string;
   label: string;
 }
+
+export interface DataTableToolbarButtons {
+  id: string;
+  label: string;
+  isVisible: boolean;
+}

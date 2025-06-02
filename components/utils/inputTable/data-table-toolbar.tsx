@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableViewOptions } from "./data-table-view-options";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
-import type { DataTableToolbarButtons, DataTableToolbarFilters } from "@/types/datatable";
+import type { DataTableToolbarFilters, DataTableToolbarButtons } from "@/types/datatable";
 import { FilterTypes } from "@/types/datatable";
 
 
@@ -68,8 +68,10 @@ export function DataTableToolbar<TData>({
                             return item.isVisible === true ? (<Button size="sm" key={item.id}>{item.label}</Button>) :
                                 (<div key={item.id}></div>)
                         })
-                    )}
+                    )
+                }
+
             </div>
-        </div>
+        </div >
     );
 }

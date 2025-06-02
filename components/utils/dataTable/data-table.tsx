@@ -28,18 +28,22 @@ import {
 import { DataTablePagination } from "./data-table-pagination"
 import { DataTableToolbar } from "./data-table-toolbar"
 
-import type { DataTableToolbarFilters } from "@/components/utils/types"
+import type { DataTableToolbarButtons, DataTableToolbarFilters } from "@/types/datatable"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[],
-  filters: DataTableToolbarFilters[]
+  filters: DataTableToolbarFilters[],
+  primary_items: DataTableToolbarButtons[],
+  pagination_pageSize?: number
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  filters
+  filters,
+  primary_items,
+  pagination_pageSize = 20
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -60,7 +64,7 @@ export function DataTable<TData, TValue>({
     },
     initialState: {
       pagination: {
-        pageSize: 25,
+        pageSize: pagination_pageSize,
       },
     },
     enableRowSelection: true,
@@ -78,7 +82,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="flex flex-col gap-4">
-      <DataTableToolbar table={table} filters={filters} />
+      <DataTableToolbar table={table} filters={filters} primary_items={primary_items} />
       <div className="rounded-md border">
         <Table>
           <TableHeader>
