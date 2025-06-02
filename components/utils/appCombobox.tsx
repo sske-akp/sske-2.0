@@ -28,15 +28,21 @@ type ComboBoxItems = ComboBoxItem[];
 
 interface AppComboboxProps {
     items: ComboBoxItems,
-    searchCategory: string
+    searchCategory: string,
+    defaultValue?: string,
+    onValueChange?: (value: string) => void
 }
 
-export function AppCombobox({ items, searchCategory }: AppComboboxProps) {
+export function AppCombobox({ items, searchCategory, defaultValue = "", onValueChange }: AppComboboxProps) {
     const [open, setOpen] = React.useState(false)
-    const [value, setValue] = React.useState("")
+    const [value, setValue] = React.useState(defaultValue)
 
     const triggerRef = React.useRef<HTMLDivElement>(null)
     const [triggerWidth, setTriggerWidth] = React.useState<number>(0)
+
+    React.useEffect(() => {
+        setValue(defaultValue);
+    }, [defaultValue]);
 
     React.useEffect(() => {
         const updateWidth = () => {
@@ -69,6 +75,9 @@ export function AppCombobox({ items, searchCategory }: AppComboboxProps) {
         e.preventDefault()
         e.stopPropagation()
         setValue("")
+        if (onValueChange) {
+            onValueChange("")
+        }
     }
 
     const handleTriggerClick = () => {
@@ -123,7 +132,11 @@ export function AppCombobox({ items, searchCategory }: AppComboboxProps) {
                                     key={items.value}
                                     value={items.value}
                                     onSelect={(currentValue) => {
-                                        setValue(currentValue === value ? "" : currentValue)
+                                        const newValue = currentValue === value ? "" : currentValue
+                                        setValue(newValue)
+                                        if (onValueChange) {
+                                            onValueChange(newValue)
+                                        }
                                         setOpen(false)
                                     }}
                                 >

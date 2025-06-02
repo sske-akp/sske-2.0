@@ -15,10 +15,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import * as React from "react"
 import { useState } from "react"
+import { AppCombobox } from "@/components/utils/appCombobox"
 
 export type InvoiceItem = {
     id: string
-    product_name: number
+    product_name: string
     quantity: number
     price_per_unit: number
     total_price: string
@@ -28,7 +29,7 @@ export const data: InvoiceItem[] =
     [
         {
             "id": "item_002",
-            "product_name": 502,
+            "product_name": "502",
             "quantity": 4,
             "price_per_unit": 120.0,
             "total_price": "480.00"
@@ -66,6 +67,29 @@ const EditableInput: React.FC<{
     )
 }
 
+const EditableComboBox: React.FC<{
+    row: Row<InvoiceItem>,
+    onUpdateRow: (id: string, updatedRow: Partial<InvoiceItem>) => void,
+    field: 'product_name'
+}> = ({ row, onUpdateRow, field }) => {
+    const [value, setValue] = useState(row.original[field])
+
+    const handleValueChange = (newValue: string) => {
+        setValue(newValue);
+        onUpdateRow(row.original.id, { [field]: newValue });
+    }
+
+    return <AppCombobox
+        items={[{
+            label: 'a',
+            value: 'b'
+        }]}
+        searchCategory="Items"
+        defaultValue={value.toString()}
+        onValueChange={handleValueChange}
+    />
+}
+
 export const columns: ColumnDef<InvoiceItem>[] = [
     {
         id: "select",
@@ -99,7 +123,17 @@ export const columns: ColumnDef<InvoiceItem>[] = [
     {
         accessorKey: "product_name",
         header: () => <div>Product Name</div>,
-        cell: ({ row }) => <div className="lowercase">{row.getValue("product_name")}</div>,
+        cell: (info) => info.getValue(),
+        meta: {
+            editable: true,
+            editCell: ({ row, onUpdateRow }) => (
+                <EditableComboBox
+                    row={row}
+                    onUpdateRow={onUpdateRow}
+                    field="product_name"
+                />
+            )
+        }
     },
     {
         accessorKey: "quantity",
