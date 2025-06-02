@@ -1,6 +1,6 @@
 import {
     ColumnDef,
-    Row
+    Row,
 } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
@@ -24,227 +24,8 @@ export type InvoiceItem = {
     total_price: string
 }
 
-
 export const data: InvoiceItem[] =
     [
-
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
-        {
-            "id": "item_002",
-            "product_name": 502,
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
-        },
-        {
-            "id": "item_001",
-            "product_name": 501,
-            "quantity": 10,
-            "price_per_unit": 15.5,
-            "total_price": "155.00"
-        },
         {
             "id": "item_002",
             "product_name": 502,
@@ -254,47 +35,36 @@ export const data: InvoiceItem[] =
         }
     ]
 
-const QuantityInput: React.FC<{ row: Row<InvoiceItem> }> = ({ row }) => {
-    const [quantity, setQuantity] = useState(row.original.quantity);
+const EditableInput: React.FC<{
+    row: Row<InvoiceItem>,
+    onUpdateRow: (id: string, updatedRow: Partial<InvoiceItem>) => void,
+    field: 'quantity' | 'price_per_unit'
+}> = ({ row, onUpdateRow, field }) => {
+    const [value, setValue] = useState(row.original[field])
 
-    const handleQuantityChange = (id: string, newQuantity: number) => {
-        setQuantity(newQuantity);
-        row.original.quantity = newQuantity;
-        row.original.total_price = (newQuantity * row.original.price_per_unit).toFixed(2);
-    };
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = parseInt(e.target.value || '0', 10)
+        setValue(newValue)
 
-    return (
-        <input
-            type="number"
-            value={quantity}
-            onChange={(e) =>
-                handleQuantityChange(row.original.id, parseInt(e.target.value, 10))
-            }
-            className="border rounded p-1 w-16"
-        />
-    );
-};
+        // Get the other field's value to calculate total price
+        const otherField = field === 'quantity' ? 'price_per_unit' : 'quantity'
+        const otherValue = row.original[otherField]
 
-const PricePerUnitInput: React.FC<{ row: Row<InvoiceItem> }> = ({ row }) => {
-    const [price_per_unit, setPricePerUnit] = useState(row.original.price_per_unit);
+        const total_price = (newValue * otherValue).toFixed(2)
 
-    const handlePricePerUnitChange = (id: string, newPricePerUnit: number) => {
-        setPricePerUnit(newPricePerUnit);
-        row.original.price_per_unit = newPricePerUnit;
-        row.original.total_price = (newPricePerUnit * row.original.price_per_unit).toFixed(2);
-    };
+        // Update both the changed field and the total price
+        onUpdateRow(row.original.id, { [field]: newValue, total_price })
+    }
 
     return (
         <input
             type="number"
-            value={price_per_unit}
-            onChange={(e) =>
-                handlePricePerUnitChange(row.original.id, parseInt(e.target.value, 10))
-            }
+            value={value}
+            onChange={handleChange}
             className="border rounded p-1 w-16"
         />
-    );
-};
+    )
+}
 
 export const columns: ColumnDef<InvoiceItem>[] = [
     {
@@ -337,13 +107,24 @@ export const columns: ColumnDef<InvoiceItem>[] = [
         cell: (info) => info.getValue(),
         meta: {
             editable: true,
-            editCell: QuantityInput,
+            editCell: ({ row, onUpdateRow }) => (
+                <EditableInput
+                    row={row}
+                    onUpdateRow={onUpdateRow}
+                    field="quantity"
+                />
+            ),
         },
     },
     {
         accessorKey: "price_per_unit",
         header: () => <div>Price Per Unit</div>,
-        cell: ({ row }) => <PricePerUnitInput row={row} />,
+        cell: (info) => info.getValue(),
+        meta: {
+            editable: true,
+            editCell: ({ row, onUpdateRow }) => <EditableInput row={row}
+                onUpdateRow={onUpdateRow} field="price_per_unit" />,
+        },
     },
     {
         accessorKey: "total_price",

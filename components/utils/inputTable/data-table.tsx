@@ -6,18 +6,16 @@ import { DataTableToolbarButtons, DataTableToolbarFilters } from "@/types/datata
 import { ColumnDef, ColumnFiltersState, SortingState, VisibilityState, flexRender, getCoreRowModel, getFacetedRowModel, getFacetedUniqueValues, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"
 import * as React from "react"
 
-interface DataTableProps<TData, TValue> {
+interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[],
   filters: DataTableToolbarFilters[],
   primary_items: DataTableToolbarButtons[],
-  pagination_pageSize?: number
 }
 
-export default function InputTable<TData, TValue>({
+export default function InputTable<TData extends { id: string }, TValue>({
   columns,
   data,
-  pagination_pageSize,
   filters = [],
   primary_items = []
 }: DataTableProps<TData, TValue>) {
@@ -89,10 +87,26 @@ export default function InputTable<TData, TValue>({
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                        {(() => {
+                          const meta = cell.column.columnDef.meta
+                          const EditComponent = meta?.editable && meta?.editCell
+
+                          if (EditComponent) {
+                            return (
+                              <EditComponent
+                                row={cell.row}
+                                onUpdateRow={(id: string, updatedRow: Partial<TData>) => {
+                                  setTableData((prev) =>
+                                    prev.map((r) => (r.id === id ? { ...r, ...updatedRow } : r))
+                                  )
+                                }}
+                              />
+                            )
+                          }
+
+                          return flexRender(cell.column.columnDef.cell, cell.getContext())
+                        })()}
+
                       </TableCell>
                     ))}
                   </TableRow>

@@ -15,8 +15,7 @@ export default function NewSale() {
                 <InputTable columns={columns}
                     data={data}
                     filters={filters}
-                    primary_items={primary_items}
-                    pagination_pageSize={100} />
+                    primary_items={primary_items} />
             </div>
         </>
     )
