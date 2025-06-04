@@ -72,7 +72,7 @@ const EditableComboBox: React.FC<{
     onUpdateRow: (id: string, updatedRow: Partial<InvoiceItem>) => void,
     field: 'product_name'
 }> = ({ row, onUpdateRow, field }) => {
-    const [value, setValue] = useState(row.original[field])
+    const [value, setValue] = useState("")
 
     const handleValueChange = (newValue: string) => {
         setValue(newValue);
@@ -83,6 +83,18 @@ const EditableComboBox: React.FC<{
         items={[{
             label: 'a',
             value: 'b'
+        }, {
+            label: 'c',
+            value: 'd'
+        }, {
+            label: 'e',
+            value: 'f'
+        }, {
+            label: 'g',
+            value: 'h'
+        }, {
+            label: 'i',
+            value: 'j'
         }]}
         searchCategory="Items"
         defaultValue={value.toString()}
