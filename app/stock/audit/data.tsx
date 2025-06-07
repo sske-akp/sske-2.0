@@ -124,7 +124,13 @@ export const columns: ColumnDef<InvoiceItem>[] = [
         ),
         enableSorting: false,
         enableHiding: false,
-        size: 50,
+    },
+    {
+        accessorKey: "id",
+        header: () => <div>Invoice Number</div>,
+        cell: ({ row }) => (
+            <div className="capitalize">{row.getValue("id")}</div>
+        ),
     },
     {
         accessorKey: "product_name",
@@ -139,8 +145,7 @@ export const columns: ColumnDef<InvoiceItem>[] = [
                     field="product_name"
                 />
             )
-        },
-        size: 600,
+        }
     },
     {
         accessorKey: "quantity",
@@ -156,7 +161,6 @@ export const columns: ColumnDef<InvoiceItem>[] = [
                 />
             ),
         },
-        size: 100,
     },
     {
         accessorKey: "price_per_unit",
@@ -167,13 +171,11 @@ export const columns: ColumnDef<InvoiceItem>[] = [
             editCell: ({ row, onUpdateRow }) => <EditableInput row={row}
                 onUpdateRow={onUpdateRow} field="price_per_unit" />,
         },
-        size: 150,
     },
     {
         accessorKey: "total_price",
         header: () => <div>Total Price</div>,
         cell: ({ row }) => <div className="lowercase">{row.getValue("total_price")}</div>,
-        size: 100,
     },
     {
         id: "actions",
@@ -203,7 +205,6 @@ export const columns: ColumnDef<InvoiceItem>[] = [
                 </DropdownMenu>
             )
         },
-        size: 50,
     },
 ]
 

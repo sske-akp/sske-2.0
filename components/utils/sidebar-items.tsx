@@ -57,7 +57,7 @@ const sidebarItems = [
             },
             {
                 title: "Stock Audit",
-                url: "#",
+                url: "/stock/audit",
                 icon: ShieldCheck,
                 disabled: false
             }
