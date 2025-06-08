@@ -25,17 +25,17 @@ export type InvoiceItem = {
     product_name: string
     quantity: number
     price_per_unit: number
-    total_price: string
+    total_price: number
 }
 
 export const data: InvoiceItem[] =
     [
         {
-            "id": "item_002",
-            "product_name": "502",
-            "quantity": 4,
-            "price_per_unit": 120.0,
-            "total_price": "480.00"
+            "id": "",
+            "product_name": "",
+            "quantity": 0,
+            "price_per_unit": 0,
+            "total_price": 0
         }
     ]
 
@@ -47,14 +47,14 @@ const EditableInput: React.FC<{
     const [value, setValue] = useState(row.original[field])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = parseInt(e.target.value || '0', 10)
+        const newValue = parseInt(e.target.value || '', 10)
         setValue(newValue)
 
         // Get the other field's value to calculate total price
         const otherField = field === 'quantity' ? 'price_per_unit' : 'quantity'
         const otherValue = row.original[otherField]
 
-        const total_price = (newValue * otherValue).toFixed(2)
+        const total_price = (newValue * otherValue) || 0
 
         // Update both the changed field and the total price
         onUpdateRow(row.original.id, { [field]: newValue, total_price })
@@ -232,6 +232,5 @@ export const primary_items: DataTableToolbarButtons[] = [{
     isVisible: true,
     onClick: () => {
         toast('added new row')
-        console.log('hey');
     }
 }]
