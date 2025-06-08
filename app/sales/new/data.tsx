@@ -4,18 +4,21 @@ import {
 } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal } from "lucide-react"
-import {
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu"
+import { Trash2Icon } from "lucide-react"
+import { toast } from "sonner"
+
+// import {
+//     DropdownMenuItem,
+//     DropdownMenuLabel,
+//     DropdownMenuSeparator,
+//     DropdownMenu,
+//     DropdownMenuContent,
+//     DropdownMenuTrigger
+// } from "@/components/ui/dropdown-menu"
 import * as React from "react"
 import { useState } from "react"
 import { AppCombobox } from "@/components/utils/appCombobox"
+import { DataTableToolbarButtons } from "@/types/datatable";
 
 export type InvoiceItem = {
     id: string
@@ -62,7 +65,7 @@ const EditableInput: React.FC<{
             type="number"
             value={value}
             onChange={handleChange}
-            className="border rounded p-1 w-16"
+            className="w-full"
         />
     )
 }
@@ -133,11 +136,13 @@ export const columns: ColumnDef<InvoiceItem>[] = [
         meta: {
             editable: true,
             editCell: ({ row, onUpdateRow }) => (
-                <EditableComboBox
-                    row={row}
-                    onUpdateRow={onUpdateRow}
-                    field="product_name"
-                />
+                <div className="custom-combobox">
+                    <EditableComboBox
+                        row={row}
+                        onUpdateRow={onUpdateRow}
+                        field="product_name"
+                    />
+                </div>
             )
         },
         size: 600,
@@ -178,29 +183,40 @@ export const columns: ColumnDef<InvoiceItem>[] = [
     {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => {
-            const payment = row.original
+        cell: () => {
+            // const payment = row.original
 
             return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem
-                            onClick={() => navigator.clipboard.writeText(payment.id)}
-                        >
-                            Copy payment ID
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>View customer</DropdownMenuItem>
-                        <DropdownMenuItem>View payment details</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div>
+                    {/* This dropdown might not be needed  */}
+                    {/* <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem
+                                onClick={() => navigator.clipboard.writeText(payment.id)}
+                            >
+                                Copy payment ID
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>View customer</DropdownMenuItem>
+                            <DropdownMenuItem>View payment details</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu> */}
+                    <Button variant='ghost' onClick={
+                        () => {
+                            toast("Item has been deleted")
+                        }
+                    }>
+
+                        <Trash2Icon />
+                    </Button>
+                </div>
             )
         },
         size: 50,
@@ -210,4 +226,12 @@ export const columns: ColumnDef<InvoiceItem>[] = [
 
 export const filters = []
 
-export const primary_items = []
+export const primary_items: DataTableToolbarButtons[] = [{
+    id: 'item',
+    label: 'Add New Item',
+    isVisible: true,
+    onClick: () => {
+        toast('added new row')
+        console.log('hey');
+    }
+}]

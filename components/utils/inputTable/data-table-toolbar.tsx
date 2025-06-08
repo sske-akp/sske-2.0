@@ -65,7 +65,7 @@ export function DataTableToolbar<TData>({
                 {
                     (
                         primary_items.map((item) => {
-                            return item.isVisible === true ? (<Button size="sm" key={item.id}>{item.label}</Button>) :
+                            return item.isVisible === true ? (<Button size="sm" key={item.id} onClick={item.onClick ? item.onClick : undefined}>{item.label}</Button>) :
                                 (<div key={item.id}></div>)
                         })
                     )

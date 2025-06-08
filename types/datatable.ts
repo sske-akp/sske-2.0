@@ -1,3 +1,5 @@
+import { ButtonProps } from "@/components/ui/button";
+
 export enum FilterTypes {
   Filter = "filter",
   DropDown = "dropdown",
@@ -15,7 +17,7 @@ export interface DataTableToolbarFilterItem {
   label: string;
 }
 
-export interface DataTableToolbarButtons {
+export interface DataTableToolbarButtons extends ButtonProps {
   id: string;
   label: string;
   isVisible: boolean;
