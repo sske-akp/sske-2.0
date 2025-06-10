@@ -16,7 +16,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
+import { useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+
 export default function NewSale() {
+    const [tableData, setTableData] = useState(data);
+
+    const getNewRow = () => ({
+        id: uuidv4(),
+        product_name: "",
+        quantity: 0,
+        price_per_unit: 0,
+        total_price: 0,
+    });
+
     return (
         <>
             <div className="px-2 sm:px-6 lg:px-8 py-4 bg-background">
@@ -53,17 +66,21 @@ export default function NewSale() {
                                 </div>
                                 <div>
                                     <Label className="block text-sm font-medium ">Address:</Label>
-                                    <Input className="mt-1 block w-full rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" rows={3} placeholder="Enter Address"></Input>
+                                    <textarea className="mt-1 block w-full rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" rows={3} placeholder="Enter Address"></textarea>
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>
 
                     <div className='p-5'>
-                        <InputTable columns={columns}
-                            data={data}
+                        <InputTable
+                            columns={columns}
+                            data={tableData}
                             filters={filters}
-                            primary_items={primary_items} />
+                            primary_items={primary_items}
+                            getNewRow={getNewRow}
+                            onDataChange={setTableData}
+                        />
                     </div>
                 </div>
                 <div className='col-span-1 gap-5s'>

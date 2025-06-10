@@ -42,8 +42,10 @@ export const data: InvoiceItem[] =
 const EditableInput: React.FC<{
     row: Row<InvoiceItem>,
     onUpdateRow: (id: string, updatedRow: Partial<InvoiceItem>) => void,
-    field: 'quantity' | 'price_per_unit'
-}> = ({ row, onUpdateRow, field }) => {
+    field: 'quantity' | 'price_per_unit',
+    onAddRow?: () => void,
+    isLastCell?: boolean,
+}> = ({ row, onUpdateRow, field, onAddRow, isLastCell }) => {
     const [value, setValue] = useState(row.original[field])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,11 +62,18 @@ const EditableInput: React.FC<{
         onUpdateRow(row.original.id, { [field]: newValue, total_price })
     }
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter" && isLastCell && onAddRow) {
+            onAddRow();
+        }
+    }
+
     return (
         <input
             type="number"
             value={value}
             onChange={handleChange}
+            onKeyDown={handleKeyDown}
             className="w-full"
         />
     )
@@ -73,8 +82,10 @@ const EditableInput: React.FC<{
 const EditableComboBox: React.FC<{
     row: Row<InvoiceItem>,
     onUpdateRow: (id: string, updatedRow: Partial<InvoiceItem>) => void,
-    field: 'product_name'
-}> = ({ row, onUpdateRow, field }) => {
+    field: 'product_name',
+    onAddRow?: () => void,
+    isLastCell?: boolean,
+}> = ({ row, onUpdateRow, field, onAddRow, isLastCell }) => {
     const [value, setValue] = useState("")
 
     const handleValueChange = (newValue: string) => {
@@ -82,27 +93,28 @@ const EditableComboBox: React.FC<{
         onUpdateRow(row.original.id, { [field]: newValue });
     }
 
-    return <AppCombobox
-        items={[{
-            label: 'a',
-            value: 'b'
-        }, {
-            label: 'c',
-            value: 'd'
-        }, {
-            label: 'e',
-            value: 'f'
-        }, {
-            label: 'g',
-            value: 'h'
-        }, {
-            label: 'i',
-            value: 'j'
-        }]}
-        searchCategory="Items"
-        defaultValue={value.toString()}
-        onValueChange={handleValueChange}
-    />
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter" && isLastCell && onAddRow) {
+            onAddRow();
+        }
+    }
+
+    return (
+        <div onKeyDown={handleKeyDown}>
+            <AppCombobox
+                items={[
+                    { label: 'a', value: 'b' },
+                    { label: 'c', value: 'd' },
+                    { label: 'e', value: 'f' },
+                    { label: 'g', value: 'h' },
+                    { label: 'i', value: 'j' }
+                ]}
+                searchCategory="Items"
+                defaultValue={value.toString()}
+                onValueChange={handleValueChange}
+            />
+        </div>
+    )
 }
 
 export const columns: ColumnDef<InvoiceItem>[] = [
@@ -135,12 +147,14 @@ export const columns: ColumnDef<InvoiceItem>[] = [
         cell: (info) => info.getValue(),
         meta: {
             editable: true,
-            editCell: ({ row, onUpdateRow }) => (
+            editCell: ({ row, onUpdateRow, onAddRow, isLastCell }) => (
                 <div className="custom-combobox">
                     <EditableComboBox
                         row={row}
                         onUpdateRow={onUpdateRow}
                         field="product_name"
+                        onAddRow={onAddRow}
+                        isLastCell={isLastCell}
                     />
                 </div>
             )
@@ -153,11 +167,13 @@ export const columns: ColumnDef<InvoiceItem>[] = [
         cell: (info) => info.getValue(),
         meta: {
             editable: true,
-            editCell: ({ row, onUpdateRow }) => (
+            editCell: ({ row, onUpdateRow, onAddRow, isLastCell }) => (
                 <EditableInput
                     row={row}
                     onUpdateRow={onUpdateRow}
                     field="quantity"
+                    onAddRow={onAddRow}
+                    isLastCell={isLastCell}
                 />
             ),
         },
@@ -169,8 +185,15 @@ export const columns: ColumnDef<InvoiceItem>[] = [
         cell: (info) => info.getValue(),
         meta: {
             editable: true,
-            editCell: ({ row, onUpdateRow }) => <EditableInput row={row}
-                onUpdateRow={onUpdateRow} field="price_per_unit" />,
+            editCell: ({ row, onUpdateRow, onAddRow, isLastCell }) => (
+                <EditableInput
+                    row={row}
+                    onUpdateRow={onUpdateRow}
+                    field="price_per_unit"
+                    onAddRow={onAddRow}
+                    isLastCell={isLastCell}
+                />
+            ),
         },
         size: 150,
     },
@@ -183,8 +206,9 @@ export const columns: ColumnDef<InvoiceItem>[] = [
     {
         id: "actions",
         enableHiding: false,
-        cell: () => {
+        cell: ({ row, table }) => { // Add row and table to cell context
             // const payment = row.original
+            const { handleDeleteRow } = table.options.meta as any; // Access handleDeleteRow from table meta
 
             return (
                 <div>
@@ -210,6 +234,7 @@ export const columns: ColumnDef<InvoiceItem>[] = [
                     </DropdownMenu> */}
                     <Button variant='ghost' onClick={
                         () => {
+                            handleDeleteRow(row.original.id); // Call handleDeleteRow
                             toast("Item has been deleted")
                         }
                     }>

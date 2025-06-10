@@ -7,6 +7,8 @@ declare module "@tanstack/react-table" {
     editCell?: React.ComponentType<{
       row: Row<TData>;
       onUpdateRow: (id: string, updatedRow: Partial<TData>) => void;
+      onAddRow?: () => void;
+      isLastCell?: boolean;
     }>;
   }
 }
