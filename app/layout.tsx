@@ -6,6 +6,9 @@ import AppSideBar from '@/components/utils/sidebar';
 import NavAppBar from '@/components/utils/navbar';
 import CommandPane from "@/components/utils/command-pane";
 import { Toaster } from "@/components/ui/sonner"
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// import { QueryClient, QueryClientProvider, HydrationBoundary, dehydrate } from "@tanstack/react-query";
+import QueryProviderWrapper from "@/components/QueryProviderWrapper";
 
 
 export const metadata: Metadata = {
@@ -29,16 +32,20 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <SidebarProvider>
-              <AppSideBar />
-              <main className="w-full">
-                <NavAppBar />
-                <CommandPane />
-                <div className="px-4">{children}</div>
-                <Toaster />
-              </main>
-            </SidebarProvider>
+            <QueryProviderWrapper>
+              <SidebarProvider>
+                <AppSideBar />
+                <main className="w-full">
+                  <NavAppBar />
+                  <CommandPane />
+                  <div className="px-4">{children}</div>
+                  <Toaster />
+                  <ReactQueryDevtools initialIsOpen={false} />
+                </main>
+              </SidebarProvider>
+            </QueryProviderWrapper>
           </ThemeProvider>
+
         </body>
       </html>
     </>

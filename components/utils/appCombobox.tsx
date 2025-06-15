@@ -36,6 +36,8 @@ interface AppComboboxProps {
 export function AppCombobox({ items, searchCategory, defaultValue = "", onValueChange }: AppComboboxProps) {
     const [open, setOpen] = React.useState(false)
     const [value, setValue] = React.useState(defaultValue)
+    const [searchTerm, setSearchTerm] = React.useState("")
+
 
     const triggerRef = React.useRef<HTMLDivElement>(null)
     const [triggerWidth, setTriggerWidth] = React.useState<number>(0)
@@ -84,6 +86,10 @@ export function AppCombobox({ items, searchCategory, defaultValue = "", onValueC
         setOpen(!open)
     }
 
+    const filteredItems = items.filter(item =>
+        item.label?.toLowerCase().includes(searchTerm.trim().toLowerCase())
+    )
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -123,14 +129,14 @@ export function AppCombobox({ items, searchCategory, defaultValue = "", onValueC
                 align="start"
                 style={{ width: triggerWidth > 0 ? `${triggerWidth}px` : "auto" }}>
                 <Command>
-                    <CommandInput placeholder={searchCategory} />
+                    <CommandInput placeholder={searchCategory} value={searchTerm} onValueChange={setSearchTerm} />
                     <CommandList>
                         <CommandEmpty>No items found.</CommandEmpty>
                         <CommandGroup>
-                            {items.map((items) => (
+                            {filteredItems.map((item, idx) => (
                                 <CommandItem
-                                    key={items.value}
-                                    value={items.value}
+                                    key={idx}
+                                    value={item.value}
                                     onSelect={(currentValue) => {
                                         const newValue = currentValue === value ? "" : currentValue
                                         setValue(newValue)
@@ -138,15 +144,16 @@ export function AppCombobox({ items, searchCategory, defaultValue = "", onValueC
                                             onValueChange(newValue)
                                         }
                                         setOpen(false)
+                                        setSearchTerm("")
                                     }}
                                 >
                                     <Check
                                         className={cn(
                                             "mr-2 h-4 w-4",
-                                            value === items.value ? "opacity-100" : "opacity-0"
+                                            value === item.value ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {items.label}
+                                    {item.label}
                                 </CommandItem>
                             ))}
                         </CommandGroup>

@@ -35,14 +35,14 @@ export default function InputTable<TData extends { id: string }, TValue>({
     const newRow = getNewRow();
     const updated = [...tableData, newRow];
     setTableData(updated);
-    if (onDataChange) onDataChange(updated);
+    if (onDataChange) setTimeout(() => onDataChange(updated), 0);
   };
 
   // Delete Row Handler
   const handleDeleteRow = (id: string) => {
     const updated = tableData.filter((row) => row.id !== id);
     setTableData(updated);
-    if (onDataChange) onDataChange(updated);
+    if (onDataChange) setTimeout(() => onDataChange(updated), 0);
   };
 
   React.useEffect(() => {
@@ -101,7 +101,7 @@ export default function InputTable<TData extends { id: string }, TValue>({
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                    {row.getVisibleCells().map((cell, cellIdx, arr) => {
+                    {row.getVisibleCells().map((cell) => {
                       const meta = cell.column.columnDef.meta;
                       const EditComponent = meta?.editable && meta?.editCell;
                       const editableCells = row.getVisibleCells().filter(c => c.column.columnDef.meta?.editable);
@@ -116,7 +116,7 @@ export default function InputTable<TData extends { id: string }, TValue>({
                                   const updated = prev.map((r) =>
                                     r.id === id ? { ...r, ...updatedRow } : r
                                   );
-                                  if (onDataChange) onDataChange(updated);
+                                  if (onDataChange) setTimeout(() => onDataChange(updated), 0);
                                   return updated;
                                 });
                               }}

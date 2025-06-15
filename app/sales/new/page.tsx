@@ -2,7 +2,7 @@
 
 import React from 'react'
 import InputTable from '@/components/utils/inputTable/data-table'
-import { columns, data, filters, primary_items } from '@/app/sales/new/data';
+import { columns, data, filters, primary_items, calculateInvoiceSummary } from '@/app/sales/new/data';
 import { AppCombobox } from '@/components/utils/appCombobox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export default function NewSale() {
     const [tableData, setTableData] = useState(data);
+    const { subtotal, gst, total, numItems, totalQuantity } = React.useMemo(() => calculateInvoiceSummary(tableData), [tableData]);
 
     const getNewRow = () => ({
         id: uuidv4(),
@@ -92,16 +93,16 @@ export default function NewSale() {
                             <div className="space-y-3">
                                 <div className="flex justify-between text-sm">
                                     <span className="">Subtotal:</span>
-                                    <span>₹{10.22}</span>
+                                    <span>₹{subtotal.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="">GST (18%):</span>
-                                    <span>₹{20}</span>
+                                    <span>₹{gst.toFixed(2)}</span>
                                 </div>
                                 <div className="border-t pt-3">
                                     <div className="flex justify-between text-lg font-semibold">
                                         <span>Total:</span>
-                                        <span>₹{30}</span>
+                                        <span>₹{total.toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -125,11 +126,11 @@ export default function NewSale() {
                         <CardContent className="space-y-2">
                             <div className="flex justify-between text-sm">
                                 <span className="">Items:</span>
-                                <span>{`20`}</span>
+                                <span>{numItems}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="">Total Qty:</span>
-                                <span>{`30`}</span>
+                                <span>{totalQuantity}</span>
                             </div>
                         </CardContent>
                     </Card>
