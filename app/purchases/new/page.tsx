@@ -6,15 +6,7 @@ import { columns, data, filters, primary_items, calculatePurchaseSummary } from 
 import { AppCombobox } from '@/components/utils/appCombobox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { v4 as uuidv4 } from "uuid";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -66,15 +58,30 @@ export default function NewPurchase() {
                                         {date ? format(date, "yyyy-MM-dd") : "Pick a date"}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent align="start" className="p-0">
-                                    <Calendar
-                                        mode="single"
-                                        selected={date}
-                                        onSelect={setDate}
-                                        captionLayout="dropdown"
-                                        startMonth={new Date(new Date().getFullYear() - 1, 0)}
-                                        endMonth={new Date(new Date().getFullYear() + 1, 0)}
-                                    />
+                                <PopoverContent align="start" className="p-0 w-auto">
+                                    <div className="flex flex-col gap-2 p-3">
+                                        <Calendar
+                                            mode="single"
+                                            selected={date}
+                                            onSelect={(selected) => {
+                                                setDate(selected as Date)
+                                                setOpen(false)
+                                            }}
+                                            captionLayout="dropdown"
+                                            startMonth={new Date(new Date().getFullYear() - 1, 0)}
+                                            endMonth={new Date(new Date().getFullYear() + 1, 0)}
+                                        />
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                                setDate(new Date())
+                                                setOpen(false)
+                                            }}
+                                        >
+                                            Today
+                                        </Button>
+                                    </div>
                                 </PopoverContent>
                             </Popover>
                         </div>
