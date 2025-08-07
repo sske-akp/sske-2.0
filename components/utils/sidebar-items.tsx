@@ -75,7 +75,7 @@ const sidebarItems = [
             },
             {
                 title: "New Customer",
-                url: "#",
+                url: "/customers/new",
                 icon: ShieldCheck,
                 disabled: false
             }

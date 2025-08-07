@@ -76,7 +76,7 @@ export default function InputTable<TData extends { id: string }, TValue>({
 
   return (
     <div className="flex flex-col gap-4">
-      <DataTableToolbar table={table} filters={filters} primary_items={primary_items.map(item => item.id === "item" ? { ...item, onClick: handleAddRow } : item)} />
+      <DataTableToolbar table={table} filters={filters} primary_items={primary_items.map(item => (item.id === "item" || item.id === "purchase") ? { ...item, onClick: handleAddRow } : item)} />
       <div className="rounded-md border">
         <ScrollArea>
           <Table>

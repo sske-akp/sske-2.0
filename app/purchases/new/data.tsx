@@ -9,7 +9,7 @@ import { useProducts } from '@/hooks/productsHooks';
 import { AppCombobox } from '@/components/utils/appCombobox';
 import { DataTableToolbarButtons } from '@/types/datatable';
 
-export type InvoiceItem = {
+export type PurchaseItem = {
     id: string;
     product_name: string;
     quantity: number;
@@ -17,7 +17,7 @@ export type InvoiceItem = {
     total_price: number;
 };
 
-export const data: InvoiceItem[] = [
+export const data: PurchaseItem[] = [
     {
         id: '',
         product_name: '',
@@ -28,8 +28,8 @@ export const data: InvoiceItem[] = [
 ];
 
 const EditableInput: React.FC<{
-    row: Row<InvoiceItem>;
-    onUpdateRow: (id: string, updatedRow: Partial<InvoiceItem>) => void;
+    row: Row<PurchaseItem>;
+    onUpdateRow: (id: string, updatedRow: Partial<PurchaseItem>) => void;
     field: 'quantity' | 'price_per_unit';
     onAddRow?: () => void;
     isLastCell?: boolean;
@@ -45,13 +45,11 @@ const EditableInput: React.FC<{
         const newValue = parseInt(e.target.value || '', 10);
         setValue(newValue);
 
-        // Get the other field's value to calculate total price
         const otherField = field === 'quantity' ? 'price_per_unit' : 'quantity';
         const otherValue = row.original[otherField];
 
         const total_price = parseFloat((newValue * otherValue).toFixed(2));
 
-        // Update both the changed field and the total price
         onUpdateRow(row.original.id, { [field]: newValue, total_price });
     };
 
@@ -73,8 +71,8 @@ const EditableInput: React.FC<{
 };
 
 const EditableComboBox: React.FC<{
-    row: Row<InvoiceItem>;
-    onUpdateRow: (id: string, updatedRow: Partial<InvoiceItem>) => void;
+    row: Row<PurchaseItem>;
+    onUpdateRow: (id: string, updatedRow: Partial<PurchaseItem>) => void;
     field: 'product_name';
     onAddRow?: () => void;
     isLastCell?: boolean;
@@ -131,7 +129,8 @@ const EditableComboBox: React.FC<{
     );
 };
 
-export const columns: ColumnDef<InvoiceItem>[] = [
+
+export const columns: ColumnDef<PurchaseItem>[] = [
     {
         id: 'select',
         header: ({ table }) => (
@@ -172,7 +171,7 @@ export const columns: ColumnDef<InvoiceItem>[] = [
                 </div>
             ),
         },
-        size: 600,
+        size: 250,
     },
     {
         accessorKey: 'quantity',
@@ -213,49 +212,24 @@ export const columns: ColumnDef<InvoiceItem>[] = [
     {
         accessorKey: 'total_price',
         header: () => <div>Total Price</div>,
-        cell: ({ row }) => <div className="lowercase">{row.getValue('total_price')}</div>,
-        size: 100,
+        cell: ({ row }) => <div>{row.getValue('total_price')}</div>,
+        size: 120,
     },
     {
         id: 'actions',
         enableHiding: false,
         cell: ({ row, table }) => {
-            // Add row and table to cell context
-            // const payment = row.original
-            const { handleDeleteRow } = table.options.meta as { handleDeleteRow: (id: string) => void }; // Access handleDeleteRow from table meta
-
+            const { handleDeleteRow } = table.options.meta as { handleDeleteRow: (id: string) => void };
             return (
-                <div>
-                    {/* This dropdown might not be needed  */}
-                    {/* <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                                onClick={() => navigator.clipboard.writeText(payment.id)}
-                            >
-                                Copy payment ID
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>View customer</DropdownMenuItem>
-                            <DropdownMenuItem>View payment details</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu> */}
-                    <Button
-                        variant="ghost"
-                        onClick={() => {
-                            handleDeleteRow(row.original.id); // Call handleDeleteRow
-                            toast('Item has been deleted');
-                        }}
-                    >
-                        <Trash2Icon />
-                    </Button>
-                </div>
+                <Button
+                    variant="ghost"
+                    onClick={() => {
+                        handleDeleteRow(row.original.id);
+                        toast('Item has been deleted');
+                    }}
+                >
+                    <Trash2Icon />
+                </Button>
             );
         },
         size: 50,
@@ -266,16 +240,13 @@ export const filters = [];
 
 export const primary_items: DataTableToolbarButtons[] = [
     {
-        id: 'item',
-        label: 'Add New Item',
+        id: 'purchase',
+        label: 'Add New Purchase Item',
         isVisible: true,
-        onClick: () => {
-            toast('added new row');
-        },
     },
 ];
 
-export function calculateInvoiceSummary(items: InvoiceItem[]): { subtotal: number; gst: number; total: number; numItems: number; totalQuantity: number } {
+export function calculatePurchaseSummary(items: PurchaseItem[]): { subtotal: number; gst: number; total: number; numItems: number; totalQuantity: number } {
     const subtotal = items.reduce((acc, item) => acc + item.total_price, 0);
     const gst = subtotal * 0.18;
     const total = subtotal + gst;
