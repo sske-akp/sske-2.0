@@ -1,18 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Trash2 } from "lucide-react"
-import { useReactTable, getCoreRowModel, flexRender, createColumnHelper } from "@tanstack/react-table"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Textarea } from "@/components/ui/textarea"
 import InputTable from "@/components/utils/inputTable/data-table"
-import { columns, data, filters, primary_items } from "@/app/stock/audit/data"
+import { columns, data } from "@/app/stock/audit/data"
 
 interface InvoiceItem {
     id: string
@@ -37,7 +34,7 @@ export default function SalePage() {
         phone: "",
     })
 
-    const [items, setItems] = useState<InvoiceItem[]>([
+    const [items] = useState<InvoiceItem[]>([
         {
             id: "1",
             description: "",
@@ -47,7 +44,6 @@ export default function SalePage() {
         },
     ])
 
-    const columnHelper = createColumnHelper<InvoiceItem>()
 
     // const columns = [
     //     columnHelper.accessor("description", {
@@ -288,7 +284,22 @@ export default function SalePage() {
                                 </div>
                             </CardContent> */}
                         {/* </Card> */}
-                        <InputTable columns={columns} data={data} />
+                        <InputTable
+                            columns={columns}
+                            data={data}
+                            filters={[]}
+                            primary_items={[]}
+                            getNewRow={() => ({
+                                id: Date.now().toString(),
+                                description: "",
+                                quantity: 1,
+                                rate: 0,
+                                amount: 0,
+                                product_name: "",
+                                price_per_unit: 0,
+                                total_price: "0",
+                            })}
+                        />
 
                     </div>
 
