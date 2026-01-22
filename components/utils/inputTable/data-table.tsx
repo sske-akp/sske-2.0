@@ -17,7 +17,6 @@ interface DataTableProps<TData, TValue> {
 export default function InputTable<TData, TValue>({
   columns,
   data,
-  pagination_pageSize,
   filters = [],
   primary_items = []
 }: DataTableProps<TData, TValue>) {
