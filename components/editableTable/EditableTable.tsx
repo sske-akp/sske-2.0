@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
+  Row,
   SortingState,
   VisibilityState,
   flexRender,
@@ -40,50 +41,42 @@ export function EditableTable<TData extends EditableRowData, TValue = unknown>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  // Sync with external data changes
+  // Sync with external data changes (only when data reference changes from parent)
+  const isExternalUpdate = React.useRef(false);
   React.useEffect(() => {
+    isExternalUpdate.current = true;
     setTableData(data);
   }, [data]);
+
+  // Notify parent of internal changes
+  React.useEffect(() => {
+    if (isExternalUpdate.current) {
+      isExternalUpdate.current = false;
+      return;
+    }
+    if (onDataChange) {
+      onDataChange(tableData);
+    }
+  }, [tableData, onDataChange]);
 
   // Row manipulation handlers
   const addRow = React.useCallback(() => {
     const newRow = getNewRow();
-    setTableData((prev) => {
-      const updated = [...prev, newRow];
-      if (onDataChange) {
-        onDataChange(updated);
-      }
-      return updated;
-    });
-  }, [getNewRow, onDataChange]);
+    setTableData((prev) => [...prev, newRow]);
+  }, [getNewRow]);
 
   const updateRow = React.useCallback(
     (id: string, updates: Partial<TData>) => {
-      setTableData((prev) => {
-        const updated = prev.map((row) =>
-          row.id === id ? { ...row, ...updates } : row
-        );
-        if (onDataChange) {
-          onDataChange(updated);
-        }
-        return updated;
-      });
+      setTableData((prev) =>
+        prev.map((row) => (row.id === id ? { ...row, ...updates } : row))
+      );
     },
-    [onDataChange]
+    []
   );
 
-  const deleteRow = React.useCallback(
-    (id: string) => {
-      setTableData((prev) => {
-        const updated = prev.filter((row) => row.id !== id);
-        if (onDataChange) {
-          onDataChange(updated);
-        }
-        return updated;
-      });
-    },
-    [onDataChange]
-  );
+  const deleteRow = React.useCallback((id: string) => {
+    setTableData((prev) => prev.filter((row) => row.id !== id));
+  }, []);
 
   // Table meta for cell access
   const tableMeta: EditableTableMeta<TData> = React.useMemo(
@@ -118,7 +111,7 @@ export function EditableTable<TData extends EditableRowData, TValue = unknown>({
 
   // Find last editable cell for Enter key handling
   const getIsLastEditableCell = React.useCallback(
-    (row: typeof table.getRowModel().rows[0], cellId: string) => {
+    (row: Row<TData>, cellId: string) => {
       const editableCells = row.getVisibleCells().filter(
         (c) => c.column.columnDef.meta?.editable
       );
