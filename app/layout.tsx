@@ -6,7 +6,6 @@ import AppSideBar from '@/components/utils/sidebar';
 import NavAppBar from '@/components/utils/navbar';
 import CommandPane from "@/components/utils/command-pane";
 import { Toaster } from "@/components/ui/sonner"
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 // import { QueryClient, QueryClientProvider, HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import QueryProviderWrapper from "@/components/QueryProviderWrapper";
 
@@ -40,7 +39,6 @@ export default function RootLayout({
                   <CommandPane />
                   <div className="px-4">{children}</div>
                   <Toaster />
-                  <ReactQueryDevtools initialIsOpen={false} />
                 </main>
               </SidebarProvider>
             </QueryProviderWrapper>

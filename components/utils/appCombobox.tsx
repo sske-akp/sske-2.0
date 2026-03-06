@@ -33,13 +33,27 @@ interface AppComboboxProps {
     onValueChange?: (value: string) => void
 }
 
-export function AppCombobox({ items, searchCategory, defaultValue = "", onValueChange }: AppComboboxProps) {
+export const AppCombobox = React.forwardRef<HTMLDivElement, AppComboboxProps>(
+  function AppCombobox({ items, searchCategory, defaultValue = "", onValueChange }, forwardedRef) {
     const [open, setOpen] = React.useState(false)
     const [value, setValue] = React.useState(defaultValue)
     const [searchTerm, setSearchTerm] = React.useState("")
 
 
     const triggerRef = React.useRef<HTMLDivElement>(null)
+
+    // Merge forwardedRef with internal triggerRef
+    const mergedRef = React.useCallback(
+        (node: HTMLDivElement | null) => {
+            (triggerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+            if (typeof forwardedRef === "function") {
+                forwardedRef(node);
+            } else if (forwardedRef) {
+                (forwardedRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+            }
+        },
+        [forwardedRef]
+    )
     const [triggerWidth, setTriggerWidth] = React.useState<number>(0)
 
     React.useEffect(() => {
@@ -94,7 +108,7 @@ export function AppCombobox({ items, searchCategory, defaultValue = "", onValueC
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <div
-                    ref={triggerRef}
+                    ref={mergedRef}
                     className="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer hover:bg-accent hover:text-accent-foreground"
                     onClick={handleTriggerClick}
                     role="combobox"
@@ -162,4 +176,5 @@ export function AppCombobox({ items, searchCategory, defaultValue = "", onValueC
             </PopoverContent>
         </Popover>
     )
-}
+  }
+)

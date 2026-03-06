@@ -17,9 +17,9 @@ export interface EditableCellProps<TData extends EditableRowData> {
 
 // Table meta for passing handlers to cells
 export interface EditableTableMeta<TData extends EditableRowData> {
-  updateRow: (id: string, updates: Partial<TData>) => void;
-  deleteRow: (id: string) => void;
-  addRow: () => void;
+  updateRow?: (id: string, updates: Partial<TData>) => void;
+  deleteRow?: (id: string) => void;
+  addRow?: () => void;
 }
 
 // Props for the main EditableTable component

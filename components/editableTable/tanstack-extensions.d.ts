@@ -1,4 +1,4 @@
-import { RowData, Row } from "@tanstack/react-table";
+import { RowData } from "@tanstack/react-table";
 import { EditableCellProps, EditableTableMeta, EditableRowData } from "./types";
 
 declare module "@tanstack/react-table" {
@@ -8,5 +8,6 @@ declare module "@tanstack/react-table" {
     editCell?: React.ComponentType<EditableCellProps<TData & EditableRowData>>;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface TableMeta<TData extends RowData> extends EditableTableMeta<TData & EditableRowData> {}
 }

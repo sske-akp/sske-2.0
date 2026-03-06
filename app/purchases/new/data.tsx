@@ -219,7 +219,7 @@ export const columns: ColumnDef<PurchaseItem>[] = [
         id: 'actions',
         enableHiding: false,
         cell: ({ row, table }) => {
-            const { handleDeleteRow } = table.options.meta as { handleDeleteRow: (id: string) => void };
+            const { handleDeleteRow } = table.options.meta as unknown as { handleDeleteRow: (id: string) => void };
             return (
                 <Button
                     variant="ghost"

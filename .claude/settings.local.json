@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(superpowers:brainstorming)",
+      "Bash(wc:*)",
+      "Skill(superpowers:writing-plans)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(npx tsc:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run type-check:*)",
+      "Bash(yarn type-check:*)",
+      "Bash(npx:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(pnpm tsc:*)",
+      "Bash(node ./node_modules/typescript/bin/tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run typecheck:*)",
+      "WebFetch(domain:tanstack.com)",
+      "WebFetch(domain:react-hook-form.com)",
+      "WebFetch(domain:github.com)"
+    ]
+  }
+}

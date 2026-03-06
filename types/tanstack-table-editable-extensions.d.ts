@@ -11,4 +11,9 @@ declare module "@tanstack/react-table" {
       isLastCell?: boolean;
     }>;
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface TableMeta<TData extends RowData> {
+    handleDeleteRow?: (id: string) => void;
+  }
 }

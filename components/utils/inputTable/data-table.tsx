@@ -111,6 +111,7 @@ export default function InputTable<TData extends { id: string }, TValue>({
                           <TableCell key={cell.id}>
                             <EditComponent
                               row={cell.row}
+                              getValue={() => cell.getValue()}
                               onUpdateRow={(id: string, updatedRow: Partial<TData>) => {
                                 setTableData((prev) => {
                                   const updated = prev.map((r) =>

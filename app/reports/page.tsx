@@ -1,5 +1,4 @@
 import { InvoiceTableExample } from "@/components/editableTable/examples/invoice-table-example";
-import { Button } from "@/components/ui/button";
 
 
 export default function Home() {
