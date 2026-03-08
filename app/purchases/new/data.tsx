@@ -12,6 +12,7 @@ import { DataTableToolbarButtons } from '@/types/datatable';
 export type PurchaseItem = {
     id: string;
     product_name: string;
+    product_id: string;
     quantity: number;
     price_per_unit: number;
     total_price: number;
@@ -21,6 +22,7 @@ export const data: PurchaseItem[] = [
     {
         id: '',
         product_name: '',
+        product_id: '',
         quantity: 0,
         price_per_unit: 0,
         total_price: 0,
@@ -87,18 +89,20 @@ const EditableComboBox: React.FC<{
 
     const productOptions = products
         ? products.map((product) => ({
-            label: product.product_name,
-            value: product.product_name,
-            ...product,
+            label: product.productName,
+            value: product.productName,
+            productId: product.productId,
+            pricePerUnit: product.pricePerUnit,
         }))
         : [];
 
     const handleValueChange = (newValue: string) => {
         setValue(newValue);
         const selectedProduct = productOptions.find((product) => product.value === newValue);
-        const price = selectedProduct?.price_per_unit || 0;
+        const price = selectedProduct?.pricePerUnit || 0;
+        const productId = selectedProduct?.productId || '';
         const total_price = parseFloat((price * (row.original.quantity || 0)).toFixed(2));
-        onUpdateRow(row.original.id, { [field]: newValue, price_per_unit: price, total_price });
+        onUpdateRow(row.original.id, { [field]: newValue, product_id: productId, price_per_unit: price, total_price });
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

@@ -10,182 +10,35 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
-import { FilterTypes, DataTableToolbarFilterItem, DataTableToolbarFilters } from "@/types/datatable"
+import { Badge } from "@/components/ui/badge"
+import { FilterTypes, DataTableToolbarFilters } from "@/types/datatable"
+import { Invoice } from "@/types/invoices"
 
-export type Payment = {
-    id: string
-    invoice_number: number
-    status: "pending" | "processing" | "success" | "failed"
-    customer_id: string
-    date: string
-    invoice_type: string
+function PaymentStatusBadge({ status }: { status: string }) {
+    switch (status) {
+        case "paid":
+            return (
+                <Badge variant="outline" className="border-green-500 text-green-700">
+                    Paid
+                </Badge>
+            );
+        case "partial":
+            return (
+                <Badge variant="outline" className="border-yellow-500 text-yellow-700">
+                    Partial
+                </Badge>
+            );
+        case "unpaid":
+        default:
+            return (
+                <Badge variant="outline" className="border-red-500 text-red-700">
+                    Unpaid
+                </Badge>
+            );
+    }
 }
 
-export const data: Payment[] = [
-    {
-        "id": "pay_001",
-        "invoice_number": 1001,
-        "status": "success",
-        "customer_id": "cust_abc123",
-        "date": "2025-05-30T14:20:00Z",
-        "invoice_type": "Commercial Electrical Installation"
-    },
-    {
-        "id": "pay_002",
-        "invoice_number": 1002,
-        "status": "processing",
-        "customer_id": "cust_xyz789",
-        "date": "2025-06-01T09:45:00Z",
-        "invoice_type": "Residential Wiring Service"
-    },
-    {
-        "id": "pay_003",
-        "invoice_number": 1003,
-        "status": "pending",
-        "customer_id": "cust_pqr456",
-        "date": "2025-06-02T08:15:00Z",
-        "invoice_type": "Emergency Repair Callout"
-    },
-    {
-        "id": "pay_004",
-        "invoice_number": 1004,
-        "status": "failed",
-        "customer_id": "cust_mno321",
-        "date": "2025-05-28T12:10:00Z",
-        "invoice_type": "Electrical Panel Upgrade"
-    },
-    {
-        "id": "pay_005",
-        "invoice_number": 1005,
-        "status": "success",
-        "customer_id": "cust_efg654",
-        "date": "2025-05-25T11:00:00Z",
-        "invoice_type": "Lighting Installation"
-    },
-    {
-        "id": "pay_006",
-        "invoice_number": 1006,
-        "status": "pending",
-        "customer_id": "cust_stu987",
-        "date": "2025-06-02T15:30:00Z",
-        "invoice_type": "Circuit Breaker Replacement"
-    },
-    {
-        "id": "pay_007",
-        "invoice_number": 1007,
-        "status": "processing",
-        "customer_id": "cust_hij332",
-        "date": "2025-05-31T10:25:00Z",
-        "invoice_type": "Ceiling Fan Installation"
-    },
-    {
-        "id": "pay_008",
-        "invoice_number": 1008,
-        "status": "success",
-        "customer_id": "cust_kly990",
-        "date": "2025-05-27T13:50:00Z",
-        "invoice_type": "EV Charging Station Setup"
-    },
-    {
-        "id": "pay_009",
-        "invoice_number": 1009,
-        "status": "failed",
-        "customer_id": "cust_vwx221",
-        "date": "2025-05-20T08:40:00Z",
-        "invoice_type": "Power Surge Repair"
-    },
-    {
-        "id": "pay_010",
-        "invoice_number": 1010,
-        "status": "success",
-        "customer_id": "cust_opq885",
-        "date": "2025-06-01T17:05:00Z",
-        "invoice_type": "Generator Installation"
-    },
-    {
-        "id": "pay_011",
-        "invoice_number": 1011,
-        "status": "pending",
-        "customer_id": "cust_rty101",
-        "date": "2025-06-02T07:00:00Z",
-        "invoice_type": "Appliance Circuit Install"
-    },
-    {
-        "id": "pay_012",
-        "invoice_number": 1012,
-        "status": "success",
-        "customer_id": "cust_bnm556",
-        "date": "2025-05-24T09:30:00Z",
-        "invoice_type": "Security System Wiring"
-    },
-    {
-        "id": "pay_013",
-        "invoice_number": 1013,
-        "status": "failed",
-        "customer_id": "cust_ghq222",
-        "date": "2025-05-22T14:45:00Z",
-        "invoice_type": "Underground Cabling"
-    },
-    {
-        "id": "pay_014",
-        "invoice_number": 1014,
-        "status": "processing",
-        "customer_id": "cust_dlt876",
-        "date": "2025-05-29T11:10:00Z",
-        "invoice_type": "Surge Protection Setup"
-    },
-    {
-        "id": "pay_015",
-        "invoice_number": 1015,
-        "status": "pending",
-        "customer_id": "cust_mst555",
-        "date": "2025-06-02T13:15:00Z",
-        "invoice_type": "Backup Power Supply Install"
-    },
-    {
-        "id": "pay_016",
-        "invoice_number": 1016,
-        "status": "success",
-        "customer_id": "cust_lmn233",
-        "date": "2025-05-23T10:00:00Z",
-        "invoice_type": "Warehouse Lighting Design"
-    },
-    {
-        "id": "pay_017",
-        "invoice_number": 1017,
-        "status": "processing",
-        "customer_id": "cust_qwe901",
-        "date": "2025-06-01T15:55:00Z",
-        "invoice_type": "Solar Panel Wiring"
-    },
-    {
-        "id": "pay_018",
-        "invoice_number": 1018,
-        "status": "failed",
-        "customer_id": "cust_nvv442",
-        "date": "2025-05-26T16:30:00Z",
-        "invoice_type": "Industrial Motor Setup"
-    },
-    {
-        "id": "pay_019",
-        "invoice_number": 1019,
-        "status": "success",
-        "customer_id": "cust_xpo110",
-        "date": "2025-05-31T07:45:00Z",
-        "invoice_type": "Basement Electrical Renovation"
-    },
-    {
-        "id": "pay_020",
-        "invoice_number": 1020,
-        "status": "pending",
-        "customer_id": "cust_uuy777",
-        "date": "2025-06-02T10:10:00Z",
-        "invoice_type": "Smoke Detector Install"
-    }
-
-]
-
-export const columns: ColumnDef<Payment>[] = [
+export const columns: ColumnDef<Invoice>[] = [
     {
         id: "select",
         header: ({ table }) => (
@@ -209,53 +62,108 @@ export const columns: ColumnDef<Payment>[] = [
         enableHiding: false,
     },
     {
-        accessorKey: "invoice_number",
+        accessorKey: "invoiceNumber",
         header: () => <div>Invoice Number</div>,
-        cell: ({ row }) => (
-            <div className="capitalize">{row.getValue("invoice_number")}</div>
-        ),
+        cell: ({ row, table }) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const meta = table.options.meta as any;
+            return (
+                <button
+                    className="font-medium text-primary underline-offset-4 hover:underline cursor-pointer"
+                    onClick={() => meta?.onViewInvoice?.(row.original.id)}
+                >
+                    {row.getValue("invoiceNumber")}
+                </button>
+            );
+        },
+    },
+    {
+        accessorKey: "customerName",
+        header: () => <div>Customer</div>,
+        cell: ({ row }) => <div>{row.getValue("customerName")}</div>,
+    },
+    {
+        accessorKey: "invoiceDate",
+        header: () => <div>Date</div>,
+        cell: ({ row }) => {
+            const dateStr = row.getValue("invoiceDate") as string;
+            if (!dateStr) return <div>-</div>;
+            const formatted = new Intl.DateTimeFormat("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+            }).format(new Date(dateStr));
+            return <div>{formatted}</div>;
+        },
+    },
+    {
+        accessorKey: "invoiceType",
+        header: () => <div>Type</div>,
+        cell: ({ row }) => {
+            const type = row.getValue("invoiceType") as string;
+            return (
+                <div>
+                    {type === "credit_note" ? (
+                        <Badge variant="secondary">Credit Note</Badge>
+                    ) : (
+                        <span className="capitalize">{type || "Sale"}</span>
+                    )}
+                </div>
+            );
+        },
     },
     {
         accessorKey: "status",
         header: () => <div>Status</div>,
-        cell: ({ row }) => <div className="lowercase">{row.getValue("status")}</div>,
+        cell: ({ row }) => {
+            const status = row.getValue("status") as string;
+            if (status === "cancelled") {
+                return <Badge variant="destructive">Cancelled</Badge>;
+            }
+            return (
+                <Badge variant="outline" className="border-green-500 text-green-700">
+                    Active
+                </Badge>
+            );
+        },
     },
     {
-        accessorKey: "customer_id",
-        header: () => <div>Customer ID</div>,
-        cell: ({ row }) => <div className="lowercase">{row.getValue("customer_id")}</div>,
+        accessorKey: "paymentStatus",
+        header: () => <div>Payment</div>,
+        cell: ({ row }) => {
+            const status = row.getValue("paymentStatus") as string;
+            return <PaymentStatusBadge status={status} />;
+        },
+        filterFn: (row, id, value: string[]) => {
+            return value.includes(row.getValue(id));
+        },
     },
     {
-        accessorKey: "date",
-        header: () => <div>Date</div>,
-        cell: ({ row }) => <div className="lowercase">{row.getValue("date")}</div>,
+        accessorKey: "totalAmount",
+        header: () => <div className="text-right">Amount</div>,
+        cell: ({ row }) => {
+            const amount = row.getValue("totalAmount") as number;
+            const formatted = new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+            }).format(amount);
+            return <div className="text-right font-medium">{formatted}</div>;
+        },
     },
     {
-        accessorKey: "invoice_type",
-        header: () => <div>Invoice Type</div>,
-        cell: ({ row }) => <div className="lowercase">{row.getValue("invoice_type")}</div>,
+        accessorKey: "itemCount",
+        header: () => <div className="text-right">Items</div>,
+        cell: ({ row }) => (
+            <div className="text-right">{row.getValue("itemCount")}</div>
+        ),
     },
-
-    // {
-    //     accessorKey: "amount",
-    //     header: () => <div className="text-right">Amount</div>,
-    //     cell: ({ row }) => {
-    //         const amount = parseFloat(row.getValue("amount"))
-
-    //         // Format the amount as a dollar amount
-    //         const formatted = new Intl.NumberFormat("en-US", {
-    //             style: "currency",
-    //             currency: "INR",
-    //         }).format(amount)
-
-    //         return <div className="text-right font-medium">{formatted}</div>
-    //     },
-    // },
     {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => {
-            const payment = row.original
+        cell: ({ row, table }) => {
+            const invoice = row.original
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const meta = table.options.meta as any
 
             return (
                 <DropdownMenu>
@@ -268,13 +176,30 @@ export const columns: ColumnDef<Payment>[] = [
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem
-                            onClick={() => navigator.clipboard.writeText(payment.id)}
+                            onClick={() => navigator.clipboard.writeText(invoice.id)}
                         >
-                            Copy payment ID
+                            Copy invoice ID
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>View customer</DropdownMenuItem>
-                        <DropdownMenuItem>View payment details</DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => window.location.href = `/sales/${invoice.id}`}
+                        >
+                            View / Print invoice
+                        </DropdownMenuItem>
+                        {invoice.invoiceType === "sale" && invoice.status === "active" && (
+                            <DropdownMenuItem
+                                onClick={() => meta?.onReturn?.(invoice.id)}
+                            >
+                                Return / Cancel
+                            </DropdownMenuItem>
+                        )}
+                        {invoice.invoiceType === "sale" && invoice.paymentStatus !== "paid" && (
+                            <DropdownMenuItem
+                                onClick={() => meta?.onRecordPayment?.(invoice)}
+                            >
+                                Record Payment
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             )
@@ -282,63 +207,27 @@ export const columns: ColumnDef<Payment>[] = [
     },
 ]
 
-export const statuses: DataTableToolbarFilterItem[] = [
-    {
-        value: "success",
-        label: "Success",
-    },
-    {
-        value: "failed",
-        label: "Failed",
-    },
-    {
-        value: "processing",
-        label: "In Progress",
-    },
-    {
-        value: "pending",
-        label: "Pending",
-    },
-    {
-        value: "canceled",
-        label: "Canceled",
-    },
-]
-
-// export const priorities: DataTableToolbarFilterItem[] = [
-//     {
-//         label: "Low",
-//         value: "low",
-//     },
-//     {
-//         label: "Medium",
-//         value: "medium",
-//     },
-//     {
-//         label: "High",
-//         value: "high",
-//     },
-// ]
-
-
 export const filters: DataTableToolbarFilters[] = [
     {
-        id: "invoice_type",
-        label: "Invoice Type",
+        id: "invoiceNumber",
+        label: "Invoice Number",
         type: FilterTypes.Filter
     },
     {
-        id: "status",
-        label: "Status",
-        type: FilterTypes.DropDown,
-        data: statuses
+        id: "customerName",
+        label: "Customer",
+        type: FilterTypes.Filter
     },
-    // {
-    //     id: "customer_id",
-    //     label: "Customer ID",
-    //     type: FilterTypes.DropDown,
-    //     data: priorities
-    // }
+    {
+        id: "paymentStatus",
+        label: "Payment Status",
+        type: FilterTypes.DropDown,
+        data: [
+            { value: "paid", label: "Paid" },
+            { value: "partial", label: "Partial" },
+            { value: "unpaid", label: "Unpaid" },
+        ],
+    },
 ]
 
 export const primary_items = [

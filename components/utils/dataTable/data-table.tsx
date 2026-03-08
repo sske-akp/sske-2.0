@@ -35,7 +35,9 @@ interface DataTableProps<TData, TValue> {
   data: TData[],
   filters: DataTableToolbarFilters[],
   primary_items: DataTableToolbarButtons[],
-  pagination_pageSize?: number
+  pagination_pageSize?: number,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  meta?: Record<string, any>
 }
 
 export function DataTable<TData, TValue>({
@@ -43,7 +45,8 @@ export function DataTable<TData, TValue>({
   data,
   filters,
   primary_items,
-  pagination_pageSize = 20
+  pagination_pageSize = 20,
+  meta,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -78,6 +81,7 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    meta,
   })
 
   return (

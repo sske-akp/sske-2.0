@@ -14,29 +14,43 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useCreateCustomer } from "@/hooks/customersHooks";
+import { toast } from "sonner";
+
+const emptyCustomer = {
+    name: "",
+    phone: "",
+    email: "",
+    gst: "",
+    address: "",
+    notes: "",
+};
 
 export default function NewCustomer() {
-    const [customer, setCustomer] = useState({
-        name: "",
-        phone: "",
-        email: "",
-        gst: "",
-        address: "",
-        notes: "",
-    });
+    const [customer, setCustomer] = useState(emptyCustomer);
+    const createCustomer = useCreateCustomer();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setCustomer({ ...customer, [e.target.name]: e.target.value });
     };
 
     const handleReset = () => {
-        setCustomer({
-            name: "",
-            phone: "",
-            email: "",
-            gst: "",
-            address: "",
-            notes: "",
+        setCustomer(emptyCustomer);
+    };
+
+    const handleSave = () => {
+        if (!customer.name.trim()) {
+            toast.error("Customer name is required");
+            return;
+        }
+        createCustomer.mutate(customer, {
+            onSuccess: () => {
+                toast.success("Customer saved successfully!");
+                handleReset();
+            },
+            onError: () => {
+                toast.error("Failed to save customer. Please try again.");
+            },
         });
     };
 
@@ -135,8 +149,10 @@ export default function NewCustomer() {
                         <Button
                             className="flex-1 rounded-lg border border-primary/40 bg-primary shadow-sm hover:bg-primary/90 transition-all duration-150 py-3 text-base font-semibold"
                             size="default"
+                            onClick={handleSave}
+                            disabled={createCustomer.isPending}
                         >
-                            Save Customer
+                            {createCustomer.isPending ? "Saving..." : "Save Customer"}
                         </Button>
                         <Button
                             type="button"

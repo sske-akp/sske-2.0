@@ -1,4 +1,6 @@
-import { ButtonProps } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+
+type ButtonProps = React.ComponentProps<typeof Button>;
 
 export enum FilterTypes {
   Filter = "filter",

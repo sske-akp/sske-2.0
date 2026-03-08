@@ -8,7 +8,16 @@ import {
     ShieldCheck,
     BarChart3,
     Settings,
-    Magnet
+    Magnet,
+    Truck,
+    Package,
+    Tag,
+    Bookmark,
+    BookOpen,
+    Scale,
+    TrendingUp,
+    Landmark,
+    Clock,
 } from "lucide-react";
 
 
@@ -43,6 +52,33 @@ const sidebarItems = [
                 url: "/purchases/all",
                 icon: FolderOpen,
             }
+        ]
+    },
+    {
+        title: "Products",
+        url: "#",
+        icon: Package,
+        subItems: [
+            {
+                title: "All Products",
+                url: "/products/all",
+                icon: Search,
+            },
+            {
+                title: "New Product",
+                url: "/products/new",
+                icon: FilePlus,
+            },
+            {
+                title: "Categories",
+                url: "/products/categories",
+                icon: Tag,
+            },
+            {
+                title: "Brands",
+                url: "/products/brands",
+                icon: Bookmark,
+            },
         ]
     },
     {
@@ -81,6 +117,55 @@ const sidebarItems = [
             }
         ]
 
+    },
+    {
+        title: "Suppliers",
+        url: "#",
+        icon: Truck,
+        subItems: [
+            {
+                title: "All Suppliers",
+                url: "/suppliers/all",
+                icon: Search,
+            },
+            {
+                title: "New Supplier",
+                url: "/suppliers/new",
+                icon: FilePlus,
+            },
+        ]
+    },
+    {
+        title: "Accounting",
+        url: "#",
+        icon: BookOpen,
+        subItems: [
+            {
+                title: "General Ledger",
+                url: "/accounting/ledger",
+                icon: BookOpen,
+            },
+            {
+                title: "Trial Balance",
+                url: "/accounting/trial-balance",
+                icon: Scale,
+            },
+            {
+                title: "Profit & Loss",
+                url: "/accounting/profit-loss",
+                icon: TrendingUp,
+            },
+            {
+                title: "Balance Sheet",
+                url: "/accounting/balance-sheet",
+                icon: Landmark,
+            },
+            {
+                title: "Receivables",
+                url: "/accounting/receivables",
+                icon: Clock,
+            },
+        ]
     },
     {
         title: "Reports",

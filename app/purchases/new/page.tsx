@@ -1,166 +1,271 @@
 "use client";
 
-import React, { useState } from 'react';
-import InputTable from '@/components/utils/inputTable/data-table';
-import { columns, data, filters, primary_items, calculatePurchaseSummary } from '@/app/purchases/new/data';
-import { AppCombobox } from '@/components/utils/appCombobox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import InputTable from "@/components/utils/inputTable/data-table";
+import {
+  columns,
+  data,
+  filters,
+  primary_items,
+  calculatePurchaseSummary,
+  PurchaseItem,
+} from "@/app/purchases/new/data";
+import { AppCombobox } from "@/components/utils/appCombobox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from "uuid";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { format } from "date-fns";
+import { useSuppliers } from "@/hooks/suppliersHooks";
+import { useCreatePurchase } from "@/hooks/purchasesHooks";
+import { PurchaseFormData } from "@/types/purchases";
+import { toast } from "sonner";
 
 export default function NewPurchase() {
-    const [tableData, setTableData] = useState(data);
-    const { subtotal, gst, total, numItems, totalQuantity } = React.useMemo(() => calculatePurchaseSummary(tableData), [tableData]);
+  const router = useRouter();
+  const [tableData, setTableData] = useState(data);
+  const { subtotal, gst, total, numItems, totalQuantity } = React.useMemo(
+    () => calculatePurchaseSummary(tableData),
+    [tableData]
+  );
 
-    // Purchase metadata state
-    const [date, setDate] = useState<Date>(() => new Date());
-    const [open, setOpen] = useState(false);
+  // Purchase metadata state
+  const [date, setDate] = useState<Date>(() => new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [supplierId, setSupplierId] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>("completed");
 
-    const getNewRow = (): import("./data").PurchaseItem => ({
-        id: uuidv4(),
-        product_name: "",
-        quantity: 0,
-        price_per_unit: 0,
-        total_price: 0,
-    });
+  const shouldPrint = React.useRef(false);
+  const { data: suppliers } = useSuppliers();
+  const createPurchaseMutation = useCreatePurchase();
 
-    return (
-        <>
-            <div className="px-2 sm:px-6 lg:px-8 py-4 bg-background">
-                <section>
-                    <h1 className="text-3xl font-bold">New Purchase</h1>
-                    <p className="text-muted-foreground">Create a new purchase entry for your supplier</p>
-                </section>
-            </div>
+  const supplierOptions = React.useMemo(
+    () =>
+      suppliers
+        ? suppliers.map((s) => ({
+            label: s.name,
+            value: s.id,
+          }))
+        : [],
+    [suppliers]
+  );
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className='col-span-3'>
-                    <div className='p-5 flex gap-4'>
-                        <div className="flex flex-col gap-2 w-1/3">
-                            <Label>Supplier</Label>
-                            <AppCombobox items={[
-                                { label: "Supplier A", value: "supplier_a" },
-                                { label: "Supplier B", value: "supplier_b" }
-                            ]} searchCategory='Suppliers' />
-                        </div>
-                        <div className="flex flex-col gap-2 w-1/3">
-                            <Label>Purchase Date</Label>
-                            <Popover open={open} onOpenChange={setOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-start text-left font-normal"
-                                    >
-                                        {date ? format(date, "yyyy-MM-dd") : "Pick a date"}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent align="start" className="p-0 w-auto">
-                                    <div className="flex flex-col gap-2 p-3">
-                                        <Calendar
-                                            mode="single"
-                                            selected={date}
-                                            onSelect={(selected) => {
-                                                setDate(selected as Date)
-                                                setOpen(false)
-                                            }}
-                                            captionLayout="dropdown"
-                                            startMonth={new Date(new Date().getFullYear() - 1, 0)}
-                                            endMonth={new Date(new Date().getFullYear() + 1, 0)}
-                                        />
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => {
-                                                setDate(new Date())
-                                                setOpen(false)
-                                            }}
-                                        >
-                                            Today
-                                        </Button>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                        <div className="flex flex-col gap-2 w-1/3">
-                            <Label>Status</Label>
-                            <AppCombobox
-                                items={[
-                                    { label: "Pending", value: "pending" },
-                                    { label: "Completed", value: "completed" },
-                                    { label: "Canceled", value: "canceled" }
-                                ]}
-                                searchCategory="Status"
-                            />
-                        </div>
-                    </div>
+  const getNewRow = (): PurchaseItem => ({
+    id: uuidv4(),
+    product_name: "",
+    product_id: "",
+    quantity: 0,
+    price_per_unit: 0,
+    total_price: 0,
+  });
 
-                    <div className='p-5'>
-                        <InputTable
-                            columns={columns}
-                            data={tableData}
-                            filters={filters}
-                            primary_items={primary_items}
-                            getNewRow={getNewRow}
-                            onDataChange={setTableData}
-                        />
-                    </div>
-                </div>
-                <div className='col-span-1 gap-5s'>
-                    <Card className='mt-5'>
-                        <CardHeader>
-                            <CardTitle>Purchase Summary</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-3">
-                                <div className="flex justify-between text-sm">
-                                    <span className="">Subtotal:</span>
-                                    <span>₹{subtotal.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="">GST (18%):</span>
-                                    <span>₹{gst.toFixed(2)}</span>
-                                </div>
-                                <div className="border-t pt-3">
-                                    <div className="flex justify-between text-lg font-semibold">
-                                        <span>Total:</span>
-                                        <span>₹{total.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 space-y-3">
-                                <Button className="w-full" size="lg">
-                                    Save Purchase
-                                </Button>
-                                <Button variant="outline" className="w-full">
-                                    Save & Print
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Quick Stats */}
-                    <Card className='mt-5'>
-                        <CardHeader>
-                            <CardTitle className="text-sm">Quick Stats</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="">Items:</span>
-                                <span>{numItems}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="">Total Qty:</span>
-                                <span>{totalQuantity}</span>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </>
+  const handleSavePurchase = () => {
+    const validItems = tableData.filter(
+      (item) => item.product_id && item.quantity > 0
     );
+
+    if (validItems.length === 0) {
+      toast.error("Add at least one product with a quantity");
+      return;
+    }
+
+    const formData: PurchaseFormData = {
+      supplierId: supplierId,
+      purchaseDate: format(date, "yyyy-MM-dd"),
+      status: status,
+      items: validItems.map((item) => ({
+        productId: item.product_id,
+        quantity: item.quantity,
+        purchasePrice: item.price_per_unit,
+      })),
+    };
+
+    createPurchaseMutation.mutate(formData, {
+      onSuccess: (result) => {
+        toast.success("Purchase saved successfully!");
+        if (shouldPrint.current && result.batchIds.length > 0) {
+          shouldPrint.current = false;
+          const batchIdsParam = result.batchIds.join(",");
+          router.push(`/purchases/${batchIdsParam}`);
+        } else {
+          shouldPrint.current = false;
+          setTableData([getNewRow()]);
+          setSupplierId(null);
+          setStatus("completed");
+          setDate(new Date());
+        }
+      },
+      onError: (error) => {
+        shouldPrint.current = false;
+        toast.error(error.message || "Failed to save purchase");
+      },
+    });
+  };
+
+  return (
+    <>
+      <div className="px-2 sm:px-6 lg:px-8 py-4 bg-background">
+        <section>
+          <h1 className="text-3xl font-bold">New Purchase</h1>
+          <p className="text-muted-foreground">
+            Create a new purchase entry for your supplier
+          </p>
+        </section>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="col-span-3">
+          <div className="p-5 flex gap-4">
+            <div className="flex flex-col gap-2 w-1/3">
+              <Label>Supplier</Label>
+              <AppCombobox
+                items={supplierOptions}
+                searchCategory="Suppliers"
+                onValueChange={(value) => setSupplierId(value || null)}
+              />
+            </div>
+            <div className="flex flex-col gap-2 w-1/3">
+              <Label>Purchase Date</Label>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    {date ? format(date, "yyyy-MM-dd") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="p-0 w-auto">
+                  <div className="flex flex-col gap-2 p-3">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(selected) => {
+                        setDate(selected as Date);
+                        setCalendarOpen(false);
+                      }}
+                      captionLayout="dropdown"
+                      startMonth={
+                        new Date(new Date().getFullYear() - 1, 0)
+                      }
+                      endMonth={
+                        new Date(new Date().getFullYear() + 1, 0)
+                      }
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setDate(new Date());
+                        setCalendarOpen(false);
+                      }}
+                    >
+                      Today
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex flex-col gap-2 w-1/3">
+              <Label>Status</Label>
+              <AppCombobox
+                items={[
+                  { label: "Completed", value: "completed" },
+                  { label: "Pending", value: "pending" },
+                  { label: "Canceled", value: "canceled" },
+                ]}
+                searchCategory="Status"
+                defaultValue="completed"
+                onValueChange={(value) => setStatus(value || "completed")}
+              />
+            </div>
+          </div>
+
+          <div className="p-5">
+            <InputTable
+              columns={columns}
+              data={tableData}
+              filters={filters}
+              primary_items={primary_items}
+              getNewRow={getNewRow}
+              onDataChange={setTableData}
+            />
+          </div>
+        </div>
+        <div className="col-span-1">
+          <Card className="mt-5">
+            <CardHeader>
+              <CardTitle>Purchase Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>GST (18%):</span>
+                  <span>₹{gst.toFixed(2)}</span>
+                </div>
+                <div className="border-t pt-3">
+                  <div className="flex justify-between text-lg font-semibold">
+                    <span>Total:</span>
+                    <span>₹{total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 space-y-3">
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleSavePurchase}
+                  disabled={createPurchaseMutation.isPending}
+                >
+                  {createPurchaseMutation.isPending
+                    ? "Saving..."
+                    : "Save Purchase"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    shouldPrint.current = true;
+                    handleSavePurchase();
+                  }}
+                  disabled={createPurchaseMutation.isPending}
+                >
+                  Save & Print
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Stats */}
+          <Card className="mt-5">
+            <CardHeader>
+              <CardTitle className="text-sm">Quick Stats</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Items:</span>
+                <span>{numItems}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Total Qty:</span>
+                <span>{totalQuantity}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </>
+  );
 }

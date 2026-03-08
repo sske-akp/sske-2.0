@@ -11,70 +11,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { FilterTypes, DataTableToolbarFilterItem, DataTableToolbarFilters } from "@/types/datatable"
-
-export type Purchase = {
-    id: string;
-    product_name: string;
-    quantity: number;
-    price_per_unit: number;
-    total_price: number;
-    supplier_name: string;
-    purchase_date: string;
-    status: "pending" | "completed" | "canceled";
-};
-
-export const data: Purchase[] = [
-    {
-        id: "purchase_001",
-        product_name: "Wireless Mouse",
-        quantity: 50,
-        price_per_unit: 15.99,
-        total_price: 799.5,
-        supplier_name: "Tech Supplies Co.",
-        purchase_date: "2025-06-01T10:30:00Z",
-        status: "completed",
-    },
-    {
-        id: "purchase_002",
-        product_name: "Mechanical Keyboard",
-        quantity: 30,
-        price_per_unit: 45.5,
-        total_price: 1365,
-        supplier_name: "Keyboard World",
-        purchase_date: "2025-06-02T14:00:00Z",
-        status: "pending",
-    },
-    {
-        id: "purchase_003",
-        product_name: "HDMI Cable",
-        quantity: 100,
-        price_per_unit: 5.99,
-        total_price: 599,
-        supplier_name: "Cable Solutions",
-        purchase_date: "2025-05-30T09:15:00Z",
-        status: "completed",
-    },
-    {
-        id: "purchase_004",
-        product_name: "USB-C Adapter",
-        quantity: 75,
-        price_per_unit: 12.5,
-        total_price: 937.5,
-        supplier_name: "Adapters Inc.",
-        purchase_date: "2025-05-28T11:45:00Z",
-        status: "canceled",
-    },
-    {
-        id: "purchase_005",
-        product_name: "External Hard Drive",
-        quantity: 20,
-        price_per_unit: 89.99,
-        total_price: 1799.8,
-        supplier_name: "Storage Solutions",
-        purchase_date: "2025-06-01T16:20:00Z",
-        status: "completed",
-    },
-];
+import { Purchase } from "@/types/purchases"
 
 export const columns: ColumnDef<Purchase>[] = [
     {
@@ -100,9 +37,9 @@ export const columns: ColumnDef<Purchase>[] = [
         enableHiding: false,
     },
     {
-        accessorKey: "product_name",
+        accessorKey: "productName",
         header: () => <div>Product Name</div>,
-        cell: ({ row }) => <div className="capitalize">{row.getValue("product_name")}</div>,
+        cell: ({ row }) => <div className="font-medium">{row.getValue("productName")}</div>,
     },
     {
         accessorKey: "quantity",
@@ -110,40 +47,47 @@ export const columns: ColumnDef<Purchase>[] = [
         cell: ({ row }) => <div>{row.getValue("quantity")}</div>,
     },
     {
-        accessorKey: "price_per_unit",
+        accessorKey: "pricePerUnit",
         header: () => <div>Price per Unit</div>,
-        cell: ({ row }) => (
-            <div>
-                {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                }).format(row.getValue("price_per_unit"))}
-            </div>
-        ),
+        cell: ({ row }) => {
+            const amount = row.getValue("pricePerUnit") as number;
+            const formatted = new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+            }).format(amount);
+            return <div>{formatted}</div>;
+        },
     },
     {
-        accessorKey: "total_price",
+        accessorKey: "totalPrice",
         header: () => <div>Total Price</div>,
-        cell: ({ row }) => (
-            <div>
-                {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                }).format(row.getValue("total_price"))}
-            </div>
-        ),
+        cell: ({ row }) => {
+            const amount = row.getValue("totalPrice") as number;
+            const formatted = new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+            }).format(amount);
+            return <div className="font-medium">{formatted}</div>;
+        },
     },
     {
-        accessorKey: "supplier_name",
-        header: () => <div>Supplier Name</div>,
-        cell: ({ row }) => <div className="capitalize">{row.getValue("supplier_name")}</div>,
+        accessorKey: "supplierName",
+        header: () => <div>Supplier</div>,
+        cell: ({ row }) => <div>{row.getValue("supplierName")}</div>,
     },
     {
-        accessorKey: "purchase_date",
+        accessorKey: "purchaseDate",
         header: () => <div>Purchase Date</div>,
-        cell: ({ row }) => (
-            <div>{new Date(row.getValue("purchase_date")).toLocaleDateString()}</div>
-        ),
+        cell: ({ row }) => {
+            const dateStr = row.getValue("purchaseDate") as string;
+            if (!dateStr) return <div>-</div>;
+            const formatted = new Intl.DateTimeFormat("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+            }).format(new Date(dateStr));
+            return <div>{formatted}</div>;
+        },
     },
     {
         accessorKey: "status",
@@ -153,8 +97,10 @@ export const columns: ColumnDef<Purchase>[] = [
     {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => {
+        cell: ({ row, table }) => {
             const purchase = row.original;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const meta = table.options.meta as any;
 
             return (
                 <DropdownMenu>
@@ -169,32 +115,27 @@ export const columns: ColumnDef<Purchase>[] = [
                         <DropdownMenuItem
                             onClick={() => navigator.clipboard.writeText(purchase.id)}
                         >
-                            Copy Purchase ID
+                            Copy batch ID
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>View Supplier</DropdownMenuItem>
-                        <DropdownMenuItem>View Purchase Details</DropdownMenuItem>
+                        <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => meta?.onDelete?.(purchase.id)}
+                        >
+                            Delete purchase
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             );
         },
     },
-];
+]
 
 export const statuses: DataTableToolbarFilterItem[] = [
-    {
-        value: "completed",
-        label: "Completed",
-    },
-    {
-        value: "pending",
-        label: "Pending",
-    },
-    {
-        value: "canceled",
-        label: "Canceled",
-    },
-];
+    { value: "completed", label: "Completed" },
+    { value: "pending", label: "Pending" },
+    { value: "canceled", label: "Canceled" },
+]
 
 export const filters: DataTableToolbarFilters[] = [
     {
@@ -204,11 +145,16 @@ export const filters: DataTableToolbarFilters[] = [
         data: statuses,
     },
     {
-        id: "supplier_name",
-        label: "Supplier Name",
+        id: "productName",
+        label: "Product",
         type: FilterTypes.Filter,
     },
-];
+    {
+        id: "supplierName",
+        label: "Supplier",
+        type: FilterTypes.Filter,
+    },
+]
 
 export const primary_items = [
     {

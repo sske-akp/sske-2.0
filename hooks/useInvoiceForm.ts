@@ -1,21 +1,27 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { invoiceFormSchema, InvoiceItem } from "@/app/sales/new/schema";
 
+export interface GstBreakdownEntry {
+  rate: number;
+  amount: number;
+}
+
 interface UseInvoiceFormParams {
   createEmptyRow: () => InvoiceItem;
-  gstRate?: number;
 }
 
 export function useInvoiceForm({
   createEmptyRow,
-  gstRate = 0.18,
 }: UseInvoiceFormParams) {
   const form = useForm({
     resolver: zodResolver(invoiceFormSchema),
     mode: "onBlur",
     defaultValues: {
+      customer_id: null,
+      payment_method: "cash" as const,
+      due_date: null,
       items: [createEmptyRow()],
     },
   });
@@ -25,32 +31,40 @@ export function useInvoiceForm({
     name: "items",
   });
 
-  // Auto-calculate total_price when quantity or price_per_unit changes
   const items = form.watch("items");
 
-  useEffect(() => {
-    if (!items) return;
-    items.forEach((item, index) => {
-      const qty = Number(item.quantity) || 0;
-      const price = Number(item.price_per_unit) || 0;
-      const expectedTotal = parseFloat((qty * price).toFixed(2));
-      if (item.total_price !== expectedTotal) {
-        form.setValue(`items.${index}.total_price`, expectedTotal, {
-          shouldDirty: true,
-        });
-      }
-    });
-  }, [items, form]);
-
   const summary = useMemo(() => {
-    if (!items) return { subtotal: 0, gst: 0, total: 0, numItems: 0, totalQuantity: 0 };
-    const subtotal = items.reduce((acc, item) => acc + (Number(item.total_price) || 0), 0);
-    const gst = subtotal * gstRate;
+    if (!items) return { subtotal: 0, gst: 0, gstBreakdown: [], total: 0, numItems: 0, totalQuantity: 0 };
+
+    const subtotal = items.reduce(
+      (acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.price_per_unit) || 0),
+      0
+    );
+
+    // Group items by tax_percent and compute GST per rate
+    const rateMap = new Map<number, number>();
+    for (const item of items) {
+      const lineSubtotal = (Number(item.quantity) || 0) * (Number(item.price_per_unit) || 0);
+      const rate = Number(item.tax_percent) || 0;
+      rateMap.set(rate, (rateMap.get(rate) ?? 0) + lineSubtotal);
+    }
+
+    const gstBreakdown: GstBreakdownEntry[] = [];
+    let gst = 0;
+    for (const [rate, rateSubtotal] of rateMap.entries()) {
+      if (rate > 0) {
+        const amount = rateSubtotal * (rate / 100);
+        gst += amount;
+        gstBreakdown.push({ rate, amount });
+      }
+    }
+    gstBreakdown.sort((a, b) => a.rate - b.rate);
+
     const total = subtotal + gst;
     const numItems = items.length;
     const totalQuantity = items.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0);
-    return { subtotal, gst, total, numItems, totalQuantity };
-  }, [items, gstRate]);
+    return { subtotal, gst, gstBreakdown, total, numItems, totalQuantity };
+  }, [items]);
 
   return { form, fieldArray, summary, createEmptyRow };
 }

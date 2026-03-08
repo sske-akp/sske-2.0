@@ -2,6 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal } from "lucide-react";
+import Link from "next/link";
 import {
     DropdownMenuItem,
     DropdownMenuLabel,
@@ -11,37 +12,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { FilterTypes, DataTableToolbarFilterItem, DataTableToolbarFilters } from "@/types/datatable";
-
-export type Customer = {
-    id: string;
-    name: string;
-    phone: string;
-    email: string;
-    gst: string;
-    address: string;
-    notes: string;
-};
-
-export const data: Customer[] = [
-    {
-        id: "cust_001",
-        name: "Amit Kumar",
-        phone: "9876543210",
-        email: "amit@example.com",
-        gst: "29ABCDE1234F2Z5",
-        address: "123 Main St, Bangalore",
-        notes: "Preferred customer",
-    },
-    {
-        id: "cust_002",
-        name: "Priya Sharma",
-        phone: "9123456780",
-        email: "priya@example.com",
-        gst: "27ABCDE1234F1Z6",
-        address: "456 Park Ave, Mumbai",
-        notes: "",
-    },
-];
+import { Customer } from "@/types/customers";
 
 export const notesOptions: DataTableToolbarFilterItem[] = [
     {
@@ -113,7 +84,12 @@ export const columns: ColumnDef<Customer>[] = [
         accessorKey: "name",
         header: () => <div>Name</div>,
         cell: ({ row }) => (
-            <div>{row.getValue("name")}</div>
+            <Link
+                href={`/customers/${row.original.id}`}
+                className="text-primary underline underline-offset-2 hover:text-primary/80"
+            >
+                {row.getValue("name")}
+            </Link>
         ),
     },
     {
@@ -154,8 +130,10 @@ export const columns: ColumnDef<Customer>[] = [
     {
         id: "actions",
         enableHiding: false,
-        cell: ({ row }) => {
+        cell: ({ row, table }) => {
             const customer = row.original;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const meta = table.options.meta as any;
 
             return (
                 <DropdownMenu>
@@ -173,7 +151,20 @@ export const columns: ColumnDef<Customer>[] = [
                             Copy customer ID
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>View details</DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href={`/customers/${customer.id}`}>
+                                View customer
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => meta?.onEdit?.(customer)}>
+                            Edit customer
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => meta?.onDelete?.(customer.id)}
+                        >
+                            Delete customer
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             );

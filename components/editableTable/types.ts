@@ -1,5 +1,7 @@
 import { ColumnDef, Row } from "@tanstack/react-table";
-import { ButtonProps } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+
+type ButtonProps = React.ComponentProps<typeof Button>;
 
 // Base row type constraint - all rows must have an id
 export interface EditableRowData {

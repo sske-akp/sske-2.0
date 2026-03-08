@@ -125,3 +125,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  [data-sidebar],
+  nav,
+  header {
+    display: none !important;
+  }
+
+  main,
+  [role="main"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
