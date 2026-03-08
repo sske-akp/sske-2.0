@@ -7,7 +7,6 @@ import {
   useCreateJournalEntry,
 } from "@/hooks/accountingHooks";
 import {
-  JournalEntry,
   Account,
   ManualJournalEntryForm,
   ManualJournalEntryLine,
