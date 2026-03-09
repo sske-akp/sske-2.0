@@ -33,6 +33,11 @@ export function useInvoiceForm({
 
   const items = form.watch("items");
 
+  // Serialize to detect deep changes — form.watch returns the same array
+  // reference when individual fields change, so useMemo([items]) won't
+  // notice edits to quantity/price within a row.
+  const itemsKey = JSON.stringify(items);
+
   const summary = useMemo(() => {
     if (!items) return { subtotal: 0, gst: 0, gstBreakdown: [], total: 0, numItems: 0, totalQuantity: 0 };
 
@@ -64,7 +69,7 @@ export function useInvoiceForm({
     const numItems = items.length;
     const totalQuantity = items.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0);
     return { subtotal, gst, gstBreakdown, total, numItems, totalQuantity };
-  }, [items]);
+  }, [itemsKey]);
 
   return { form, fieldArray, summary, createEmptyRow };
 }

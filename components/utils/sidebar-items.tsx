@@ -18,6 +18,7 @@ import {
     TrendingUp,
     Landmark,
     Clock,
+    ScanSearch,
 } from "lucide-react";
 
 
@@ -90,6 +91,11 @@ const sidebarItems = [
                 title: "Search Stock",
                 url: "/stock/all",
                 icon: Search,
+            },
+            {
+                title: "Stock Lookup",
+                url: "/stock/lookup",
+                icon: ScanSearch,
             },
             {
                 title: "Stock Audit",
