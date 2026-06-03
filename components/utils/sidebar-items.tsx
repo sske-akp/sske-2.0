@@ -179,6 +179,23 @@ const sidebarItems = [
         ]
     },
     {
+        title: "GST",
+        url: "#",
+        icon: Scale,
+        subItems: [
+            {
+                title: "GSTR-1",
+                url: "/gst/gstr1",
+                icon: FileText,
+            },
+            {
+                title: "GSTR-3B",
+                url: "/gst/gstr3b",
+                icon: BarChart3,
+            },
+        ]
+    },
+    {
         title: "Reports",
         url: "/reports/",
         icon: BarChart3
