@@ -52,6 +52,11 @@ const sidebarItems = [
                 title: "All Purchases",
                 url: "/purchases/all",
                 icon: FolderOpen,
+            },
+            {
+                title: "Purchase Bills",
+                url: "/purchases/bills",
+                icon: Landmark,
             }
         ]
     },

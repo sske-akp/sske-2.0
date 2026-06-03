@@ -15,6 +15,7 @@ import { AppCombobox } from "@/components/utils/appCombobox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { v4 as uuidv4 } from "uuid";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -24,9 +25,13 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { useSuppliers } from "@/hooks/suppliersHooks";
-import { useCreatePurchase } from "@/hooks/purchasesHooks";
-import { PurchaseFormData } from "@/types/purchases";
+import { useCreatePurchaseBill } from "@/hooks/purchasesHooks";
+import { PurchaseBillFormData } from "@/types/purchases";
 import { toast } from "sonner";
+
+// Default input GST rate applied to purchase lines. Per-product GST rates are
+// wired in Phase 2 (GST compliance); the summary above also uses a flat 18%.
+const DEFAULT_INPUT_GST = 18;
 
 export default function NewPurchase() {
   const router = useRouter();
@@ -40,11 +45,11 @@ export default function NewPurchase() {
   const [date, setDate] = useState<Date>(() => new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [supplierId, setSupplierId] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>("completed");
+  const [billNumber, setBillNumber] = useState<string>("");
+  const [dueDate, setDueDate] = useState<string>("");
 
-  const shouldPrint = React.useRef(false);
   const { data: suppliers } = useSuppliers();
-  const createPurchaseMutation = useCreatePurchase();
+  const createPurchaseBillMutation = useCreatePurchaseBill();
 
   const supplierOptions = React.useMemo(
     () =>
@@ -66,7 +71,15 @@ export default function NewPurchase() {
     total_price: 0,
   });
 
-  const handleSavePurchase = () => {
+  const resetForm = () => {
+    setTableData([getNewRow()]);
+    setSupplierId(null);
+    setBillNumber("");
+    setDueDate("");
+    setDate(new Date());
+  };
+
+  const handleSavePurchase = (goToList: boolean) => {
     const validItems = tableData.filter(
       (item) => item.product_id && item.quantity > 0
     );
@@ -76,35 +89,34 @@ export default function NewPurchase() {
       return;
     }
 
-    const formData: PurchaseFormData = {
-      supplierId: supplierId,
-      purchaseDate: format(date, "yyyy-MM-dd"),
-      status: status,
+    if (!supplierId) {
+      toast.error("Select a supplier");
+      return;
+    }
+
+    const formData: PurchaseBillFormData = {
+      supplierId,
+      billNumber,
+      billDate: format(date, "yyyy-MM-dd"),
+      dueDate: dueDate || null,
       items: validItems.map((item) => ({
         productId: item.product_id,
         quantity: item.quantity,
         purchasePrice: item.price_per_unit,
+        taxPercent: DEFAULT_INPUT_GST,
       })),
     };
 
-    createPurchaseMutation.mutate(formData, {
-      onSuccess: (result) => {
-        toast.success("Purchase saved successfully!");
-        if (shouldPrint.current && result.batchIds.length > 0) {
-          shouldPrint.current = false;
-          const batchIdsParam = result.batchIds.join(",");
-          router.push(`/purchases/${batchIdsParam}`);
-        } else {
-          shouldPrint.current = false;
-          setTableData([getNewRow()]);
-          setSupplierId(null);
-          setStatus("completed");
-          setDate(new Date());
+    createPurchaseBillMutation.mutate(formData, {
+      onSuccess: () => {
+        toast.success("Purchase bill saved successfully!");
+        resetForm();
+        if (goToList) {
+          router.push("/purchases/all");
         }
       },
       onError: (error) => {
-        shouldPrint.current = false;
-        toast.error(error.message || "Failed to save purchase");
+        toast.error(error.message || "Failed to save purchase bill");
       },
     });
   };
@@ -122,8 +134,8 @@ export default function NewPurchase() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="col-span-3">
-          <div className="p-5 flex gap-4">
-            <div className="flex flex-col gap-2 w-1/3">
+          <div className="p-5 flex flex-wrap gap-4">
+            <div className="flex flex-col gap-2 w-1/4 min-w-[180px]">
               <Label>Supplier</Label>
               <AppCombobox
                 items={supplierOptions}
@@ -131,8 +143,16 @@ export default function NewPurchase() {
                 onValueChange={(value) => setSupplierId(value || null)}
               />
             </div>
-            <div className="flex flex-col gap-2 w-1/3">
-              <Label>Purchase Date</Label>
+            <div className="flex flex-col gap-2 w-1/4 min-w-[160px]">
+              <Label>Bill Number</Label>
+              <Input
+                placeholder="Supplier's bill no."
+                value={billNumber}
+                onChange={(e) => setBillNumber(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2 w-1/4 min-w-[160px]">
+              <Label>Bill Date</Label>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -173,17 +193,12 @@ export default function NewPurchase() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="flex flex-col gap-2 w-1/3">
-              <Label>Status</Label>
-              <AppCombobox
-                items={[
-                  { label: "Completed", value: "completed" },
-                  { label: "Pending", value: "pending" },
-                  { label: "Canceled", value: "canceled" },
-                ]}
-                searchCategory="Status"
-                defaultValue="completed"
-                onValueChange={(value) => setStatus(value || "completed")}
+            <div className="flex flex-col gap-2 w-1/4 min-w-[160px]">
+              <Label>Due Date</Label>
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
           </div>
@@ -226,23 +241,20 @@ export default function NewPurchase() {
                 <Button
                   className="w-full"
                   size="lg"
-                  onClick={handleSavePurchase}
-                  disabled={createPurchaseMutation.isPending}
+                  onClick={() => handleSavePurchase(false)}
+                  disabled={createPurchaseBillMutation.isPending}
                 >
-                  {createPurchaseMutation.isPending
+                  {createPurchaseBillMutation.isPending
                     ? "Saving..."
-                    : "Save Purchase"}
+                    : "Save Bill"}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => {
-                    shouldPrint.current = true;
-                    handleSavePurchase();
-                  }}
-                  disabled={createPurchaseMutation.isPending}
+                  onClick={() => handleSavePurchase(true)}
+                  disabled={createPurchaseBillMutation.isPending}
                 >
-                  Save & Print
+                  Save & View All
                 </Button>
               </div>
             </CardContent>

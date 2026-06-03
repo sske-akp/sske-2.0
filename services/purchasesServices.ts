@@ -2,6 +2,11 @@ import {
   ProductBatchResponseAPI,
   Purchase,
   PurchaseFormData,
+  PurchaseBillFormData,
+  CreatePurchaseBillResult,
+  SupplierPaymentFormData,
+  PurchaseBillAPI,
+  PurchaseBillSummary,
 } from "@/types/purchases";
 import { fetchProducts } from "@/services/productsServices";
 import { fetchSuppliers } from "@/services/suppliersServices";
@@ -115,4 +120,90 @@ export async function deletePurchase(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to delete purchase");
   }
+}
+
+// Create a purchase bill + line items. The backend creates a stock batch per
+// line and posts the journal entry (DR Inventory + DR GST Input / CR A/P).
+export async function createPurchaseBill(
+  form: PurchaseBillFormData
+): Promise<CreatePurchaseBillResult> {
+  const res = await fetch(`${baseUrl}/purchase_bills/with_items/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      bill_number: form.billNumber || null,
+      supplier_id: form.supplierId || null,
+      bill_date: form.billDate,
+      due_date: form.dueDate || null,
+      items: form.items.map((i) => ({
+        product_id: i.productId,
+        quantity: i.quantity,
+        purchase_price: i.purchasePrice,
+        tax_percent: i.taxPercent,
+      })),
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.detail || "Failed to create purchase bill");
+  }
+  return res.json();
+}
+
+// List purchase bills with resolved supplier names and computed balance.
+export async function fetchPurchaseBills(): Promise<PurchaseBillSummary[]> {
+  const [billsRes, suppliers] = await Promise.all([
+    fetch(`${baseUrl}/purchase_bills/`),
+    fetchSuppliers(),
+  ]);
+
+  if (!billsRes.ok) {
+    throw new Error("Failed to fetch purchase bills");
+  }
+
+  const bills: PurchaseBillAPI[] = await billsRes.json();
+  const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
+
+  return bills.map((b) => {
+    const total = b.total_amount ?? 0;
+    const paid = b.amount_paid ?? 0;
+    return {
+      id: b.id,
+      billNumber: b.bill_number ?? "—",
+      supplierId: b.supplier_id,
+      supplierName: b.supplier_id
+        ? supplierMap.get(b.supplier_id) ?? "Unknown"
+        : "—",
+      billDate: b.bill_date ?? "",
+      dueDate: b.due_date,
+      totalAmount: total,
+      amountPaid: paid,
+      remaining: total - paid,
+      paymentStatus: b.payment_status ?? "unpaid",
+    };
+  });
+}
+
+// Record a payment made against a purchase bill (DR A/P / CR Cash|Bank).
+export async function recordSupplierPayment(
+  form: SupplierPaymentFormData
+): Promise<{ id: string }> {
+  const res = await fetch(`${baseUrl}/payments/supplier/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      purchase_bill_id: form.purchaseBillId,
+      supplier_id: form.supplierId ?? null,
+      amount: form.amount,
+      payment_method: form.paymentMethod,
+      payment_date: form.paymentDate,
+      reference_number: form.referenceNumber ?? null,
+      notes: form.notes ?? null,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.detail || "Failed to record supplier payment");
+  }
+  return res.json();
 }
