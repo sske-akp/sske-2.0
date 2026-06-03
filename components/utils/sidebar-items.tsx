@@ -19,6 +19,8 @@ import {
     Landmark,
     Clock,
     ScanSearch,
+    Receipt,
+    NotebookPen,
 } from "lucide-react";
 
 
@@ -151,6 +153,16 @@ const sidebarItems = [
         url: "#",
         icon: BookOpen,
         subItems: [
+            {
+                title: "Vouchers",
+                url: "/accounting/vouchers",
+                icon: Receipt,
+            },
+            {
+                title: "Day Book",
+                url: "/accounting/day-book",
+                icon: NotebookPen,
+            },
             {
                 title: "General Ledger",
                 url: "/accounting/ledger",
