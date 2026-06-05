@@ -8,8 +8,7 @@ import {
   ProductCategory,
   ProductCategoryFormData,
 } from "@/types/products";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "@/lib/apiClient";
 
 function mapToProductOption(api: ProductWithBatchesAPI): ProductOption | null {
   const activeBatch = api.batches.find(
@@ -27,11 +26,7 @@ function mapToProductOption(api: ProductWithBatchesAPI): ProductOption | null {
 }
 
 export async function fetchProducts(): Promise<ProductOption[]> {
-  const response = await fetch(`${baseUrl}/products/with_batches/`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch products");
-  }
-  const data: ProductWithBatchesAPI[] = await response.json();
+  const data = await apiFetch<ProductWithBatchesAPI[]>("/products/with_batches/");
   return data
     .filter((p) => !p.disabled)
     .map(mapToProductOption)
@@ -40,131 +35,56 @@ export async function fetchProducts(): Promise<ProductOption[]> {
 
 // Fetch all products with batches (includes disabled, for the management table)
 export async function fetchProductsWithBatches(): Promise<ProductWithBatchesAPI[]> {
-  const response = await fetch(`${baseUrl}/products/with_batches/`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch products");
-  }
-  return response.json();
+  return apiFetch<ProductWithBatchesAPI[]>("/products/with_batches/");
 }
 
 // Create product
 export async function createProduct(data: ProductFormData): Promise<Product> {
-  const response = await fetch(`${baseUrl}/products/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to create product");
-  }
-  return response.json();
+  return apiFetch<Product>("/products/", { method: "POST", json: data });
 }
 
 // Update product
 export async function updateProduct(id: string, data: ProductFormData): Promise<Product> {
-  const response = await fetch(`${baseUrl}/products/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update product");
-  }
-  return response.json();
+  return apiFetch<Product>(`/products/${id}`, { method: "PUT", json: data });
 }
 
 // Soft-delete (disable) product
 export async function deleteProduct(id: string): Promise<void> {
-  const response = await fetch(`${baseUrl}/products/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete product");
-  }
+  await apiFetch<void>(`/products/${id}`, { method: "DELETE", parse: "none" });
 }
 
 // --- Brands ---
 
 export async function fetchBrands(): Promise<ProductBrand[]> {
-  const response = await fetch(`${baseUrl}/product_brands/`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch brands");
-  }
-  return response.json();
+  return apiFetch<ProductBrand[]>("/product_brands/");
 }
 
 export async function createBrand(data: ProductBrandFormData): Promise<ProductBrand> {
-  const response = await fetch(`${baseUrl}/product_brands/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to create brand");
-  }
-  return response.json();
+  return apiFetch<ProductBrand>("/product_brands/", { method: "POST", json: data });
 }
 
 export async function updateBrand(id: string, data: ProductBrandFormData): Promise<ProductBrand> {
-  const response = await fetch(`${baseUrl}/product_brands/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update brand");
-  }
-  return response.json();
+  return apiFetch<ProductBrand>(`/product_brands/${id}`, { method: "PUT", json: data });
 }
 
 export async function deleteBrand(id: string): Promise<void> {
-  const response = await fetch(`${baseUrl}/product_brands/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete brand");
-  }
+  await apiFetch<void>(`/product_brands/${id}`, { method: "DELETE", parse: "none" });
 }
 
 // --- Categories ---
 
 export async function fetchCategories(): Promise<ProductCategory[]> {
-  const response = await fetch(`${baseUrl}/product_categories/`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch categories");
-  }
-  return response.json();
+  return apiFetch<ProductCategory[]>("/product_categories/");
 }
 
 export async function createCategory(data: ProductCategoryFormData): Promise<ProductCategory> {
-  const response = await fetch(`${baseUrl}/product_categories/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to create category");
-  }
-  return response.json();
+  return apiFetch<ProductCategory>("/product_categories/", { method: "POST", json: data });
 }
 
 export async function updateCategory(id: string, data: ProductCategoryFormData): Promise<ProductCategory> {
-  const response = await fetch(`${baseUrl}/product_categories/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update category");
-  }
-  return response.json();
+  return apiFetch<ProductCategory>(`/product_categories/${id}`, { method: "PUT", json: data });
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  const response = await fetch(`${baseUrl}/product_categories/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete category");
-  }
+  await apiFetch<void>(`/product_categories/${id}`, { method: "DELETE", parse: "none" });
 }

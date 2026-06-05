@@ -1,7 +1,6 @@
 import { Customer, CustomerAPI, CustomerFormData } from "@/types/customers";
 import { InvoiceAPI } from "@/types/invoices";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "@/lib/apiClient";
 
 export interface CustomerInvoice {
   id: string;
@@ -38,64 +37,37 @@ function mapFormToAPI(form: CustomerFormData) {
 }
 
 export async function fetchCustomers(): Promise<Customer[]> {
-  const response = await fetch(`${baseUrl}/customers/`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch customers");
-  }
-  const data: CustomerAPI[] = await response.json();
+  const data = await apiFetch<CustomerAPI[]>("/customers/");
   return data.map(mapAPIToCustomer);
 }
 
 export async function createCustomer(form: CustomerFormData): Promise<Customer> {
-  const response = await fetch(`${baseUrl}/customers/`, {
+  const data = await apiFetch<CustomerAPI>("/customers/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(mapFormToAPI(form)),
+    json: mapFormToAPI(form),
   });
-  if (!response.ok) {
-    throw new Error("Failed to create customer");
-  }
-  const data: CustomerAPI = await response.json();
   return mapAPIToCustomer(data);
 }
 
 export async function updateCustomer(id: string, form: CustomerFormData): Promise<Customer> {
-  const response = await fetch(`${baseUrl}/customers/${id}`, {
+  const data = await apiFetch<CustomerAPI>(`/customers/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(mapFormToAPI(form)),
+    json: mapFormToAPI(form),
   });
-  if (!response.ok) {
-    throw new Error("Failed to update customer");
-  }
-  const data: CustomerAPI = await response.json();
   return mapAPIToCustomer(data);
 }
 
 export async function deleteCustomer(id: string): Promise<void> {
-  const response = await fetch(`${baseUrl}/customers/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete customer");
-  }
+  await apiFetch<void>(`/customers/${id}`, { method: "DELETE", parse: "none" });
 }
 
 export async function fetchCustomerById(id: string): Promise<Customer> {
-  const response = await fetch(`${baseUrl}/customers/${id}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch customer");
-  }
-  const data: CustomerAPI = await response.json();
+  const data = await apiFetch<CustomerAPI>(`/customers/${id}`);
   return mapAPIToCustomer(data);
 }
 
 export async function fetchCustomerInvoices(customerId: string): Promise<CustomerInvoice[]> {
-  const response = await fetch(`${baseUrl}/invoices/`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch invoices");
-  }
-  const data: InvoiceAPI[] = await response.json();
+  const data = await apiFetch<InvoiceAPI[]>("/invoices/");
   return data
     .filter((inv) => inv.customer_id === customerId)
     .map((inv) => ({

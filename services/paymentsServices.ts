@@ -1,6 +1,5 @@
 import { PaymentAPI, Payment } from "@/types/payments";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "@/lib/apiClient";
 
 function mapPaymentAPIToUI(api: PaymentAPI): Payment {
   return {
@@ -17,10 +16,6 @@ function mapPaymentAPIToUI(api: PaymentAPI): Payment {
 }
 
 export async function fetchCustomerPayments(customerId: string): Promise<Payment[]> {
-  const response = await fetch(`${baseUrl}/payments/by_customer/${customerId}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch customer payments");
-  }
-  const data: PaymentAPI[] = await response.json();
+  const data = await apiFetch<PaymentAPI[]>(`/payments/by_customer/${customerId}`);
   return data.map(mapPaymentAPIToUI);
 }

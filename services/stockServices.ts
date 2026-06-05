@@ -1,14 +1,9 @@
 import { ProductWithBatchesAPI } from "@/types/products";
 import { StockItem, StockBatchDetail, StockAdjustment, AuditRow } from "@/types/stock";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "@/lib/apiClient";
 
 export async function fetchStock(): Promise<StockItem[]> {
-  const response = await fetch(`${baseUrl}/products/with_batches/`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch stock");
-  }
-  const data: ProductWithBatchesAPI[] = await response.json();
+  const data = await apiFetch<ProductWithBatchesAPI[]>("/products/with_batches/");
 
   return data
     .filter((p) => !p.disabled)
@@ -41,13 +36,7 @@ export async function fetchStock(): Promise<StockItem[]> {
 export async function fetchStockDetails(
   productId: string
 ): Promise<StockBatchDetail[]> {
-  const response = await fetch(
-    `${baseUrl}/products/with_batches/`
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch stock details");
-  }
-  const data: ProductWithBatchesAPI[] = await response.json();
+  const data = await apiFetch<ProductWithBatchesAPI[]>("/products/with_batches/");
   const product = data.find((p) => p.id === productId);
   if (!product) return [];
 
@@ -72,16 +61,10 @@ export async function fetchAuditRows(): Promise<{
   rows: AuditRow[];
   categories: { id: string; name: string }[];
 }> {
-  const [productsRes, categoriesRes] = await Promise.all([
-    fetch(`${baseUrl}/products/with_batches/`),
-    fetch(`${baseUrl}/product_categories/`),
+  const [products, categoriesRaw] = await Promise.all([
+    apiFetch<ProductWithBatchesAPI[]>("/products/with_batches/"),
+    apiFetch<CategoryAPI[]>("/product_categories/"),
   ]);
-
-  if (!productsRes.ok) throw new Error("Failed to fetch products");
-  if (!categoriesRes.ok) throw new Error("Failed to fetch categories");
-
-  const products: ProductWithBatchesAPI[] = await productsRes.json();
-  const categoriesRaw: CategoryAPI[] = await categoriesRes.json();
 
   const categoryMap = new Map(
     categoriesRaw.map((c) => [c.id, c.name ?? "Uncategorized"])
@@ -118,13 +101,9 @@ export async function adjustStock(
 ): Promise<void> {
   const results = await Promise.allSettled(
     adjustments.map((adj) =>
-      fetch(`${baseUrl}/product_batches/${adj.batchId}`, {
+      apiFetch<unknown>(`/product_batches/${adj.batchId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ remaining_qty: adj.countedQty }),
-      }).then((res) => {
-        if (!res.ok) throw new Error("Failed to adjust batch");
-        return res.json();
+        json: { remaining_qty: adj.countedQty },
       })
     )
   );

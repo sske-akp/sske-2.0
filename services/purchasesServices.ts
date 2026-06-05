@@ -10,21 +10,15 @@ import {
 } from "@/types/purchases";
 import { fetchProducts } from "@/services/productsServices";
 import { fetchSuppliers } from "@/services/suppliersServices";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "@/lib/apiClient";
 
 export async function fetchPurchases(): Promise<Purchase[]> {
-  const [batchesRes, products, suppliers] = await Promise.all([
-    fetch(`${baseUrl}/product_batches/`),
+  const [batches, products, suppliers] = await Promise.all([
+    apiFetch<ProductBatchResponseAPI[]>("/product_batches/"),
     fetchProducts(),
     fetchSuppliers(),
   ]);
 
-  if (!batchesRes.ok) {
-    throw new Error("Failed to fetch purchases");
-  }
-
-  const batches: ProductBatchResponseAPI[] = await batchesRes.json();
   const productMap = new Map(products.map((p) => [p.productId, p.productName]));
   const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
 
@@ -49,10 +43,9 @@ export interface CreatePurchaseResult {
 export async function createPurchase(form: PurchaseFormData): Promise<CreatePurchaseResult> {
   const results = await Promise.allSettled(
     form.items.map((item) =>
-      fetch(`${baseUrl}/product_batches/`, {
+      apiFetch<{ id: string }>("/product_batches/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        json: {
           product_id: item.productId,
           supplier_id: form.supplierId || null,
           batch_code: `PUR-${new Date().toISOString().slice(0, 10)}`,
@@ -62,10 +55,7 @@ export async function createPurchase(form: PurchaseFormData): Promise<CreatePurc
           purchase_date: form.purchaseDate,
           source_type: "purchase",
           status: form.status,
-        }),
-      }).then((res) => {
-        if (!res.ok) throw new Error("Failed to create batch");
-        return res.json();
+        },
       })
     )
   );
@@ -85,23 +75,16 @@ export async function createPurchase(form: PurchaseFormData): Promise<CreatePurc
 }
 
 export async function fetchPurchasesByIds(ids: string[]): Promise<Purchase[]> {
-  const responses = await Promise.all(
-    ids.map((id) =>
-      fetch(`${baseUrl}/product_batches/${id}`).then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch batch");
-        return res.json();
-      })
-    )
-  );
-
-  const [products, suppliers] = await Promise.all([
+  const [responses, products, suppliers] = await Promise.all([
+    Promise.all(ids.map((id) => apiFetch<ProductBatchResponseAPI>(`/product_batches/${id}`))),
     fetchProducts(),
     fetchSuppliers(),
   ]);
+
   const productMap = new Map(products.map((p) => [p.productId, p.productName]));
   const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
 
-  return (responses as ProductBatchResponseAPI[]).map((b) => ({
+  return responses.map((b) => ({
     id: b.id,
     productName: b.product_id ? productMap.get(b.product_id) ?? "Unknown" : "Unknown",
     supplierName: b.supplier_id ? supplierMap.get(b.supplier_id) ?? "Unknown" : "N/A",
@@ -114,12 +97,7 @@ export async function fetchPurchasesByIds(ids: string[]): Promise<Purchase[]> {
 }
 
 export async function deletePurchase(id: string): Promise<void> {
-  const response = await fetch(`${baseUrl}/product_batches/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete purchase");
-  }
+  await apiFetch<void>(`/product_batches/${id}`, { method: "DELETE", parse: "none" });
 }
 
 // Create a purchase bill + line items. The backend creates a stock batch per
@@ -127,10 +105,9 @@ export async function deletePurchase(id: string): Promise<void> {
 export async function createPurchaseBill(
   form: PurchaseBillFormData
 ): Promise<CreatePurchaseBillResult> {
-  const res = await fetch(`${baseUrl}/purchase_bills/with_items/`, {
+  return apiFetch<CreatePurchaseBillResult>("/purchase_bills/with_items/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    json: {
       bill_number: form.billNumber || null,
       supplier_id: form.supplierId || null,
       bill_date: form.billDate,
@@ -141,27 +118,17 @@ export async function createPurchaseBill(
         purchase_price: i.purchasePrice,
         tax_percent: i.taxPercent,
       })),
-    }),
+    },
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.detail || "Failed to create purchase bill");
-  }
-  return res.json();
 }
 
 // List purchase bills with resolved supplier names and computed balance.
 export async function fetchPurchaseBills(): Promise<PurchaseBillSummary[]> {
-  const [billsRes, suppliers] = await Promise.all([
-    fetch(`${baseUrl}/purchase_bills/`),
+  const [bills, suppliers] = await Promise.all([
+    apiFetch<PurchaseBillAPI[]>("/purchase_bills/"),
     fetchSuppliers(),
   ]);
 
-  if (!billsRes.ok) {
-    throw new Error("Failed to fetch purchase bills");
-  }
-
-  const bills: PurchaseBillAPI[] = await billsRes.json();
   const supplierMap = new Map(suppliers.map((s) => [s.id, s.name]));
 
   return bills.map((b) => {
@@ -188,10 +155,9 @@ export async function fetchPurchaseBills(): Promise<PurchaseBillSummary[]> {
 export async function recordSupplierPayment(
   form: SupplierPaymentFormData
 ): Promise<{ id: string }> {
-  const res = await fetch(`${baseUrl}/payments/supplier/`, {
+  return apiFetch<{ id: string }>("/payments/supplier/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    json: {
       purchase_bill_id: form.purchaseBillId,
       supplier_id: form.supplierId ?? null,
       amount: form.amount,
@@ -199,11 +165,6 @@ export async function recordSupplierPayment(
       payment_date: form.paymentDate,
       reference_number: form.referenceNumber ?? null,
       notes: form.notes ?? null,
-    }),
+    },
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.detail || "Failed to record supplier payment");
-  }
-  return res.json();
 }

@@ -12,8 +12,7 @@ import {
   AgingReceivablesReport,
   AgingRow,
 } from "@/types/accounting";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "@/lib/apiClient";
 
 // --- Mappers ---
 
@@ -55,9 +54,7 @@ function mapJournalEntry(api: JournalEntryAPI): JournalEntry {
 // --- Accounts ---
 
 export async function fetchAccounts(): Promise<Account[]> {
-  const res = await fetch(`${baseUrl}/accounts/?limit=500`);
-  if (!res.ok) throw new Error("Failed to fetch accounts");
-  const data: AccountAPI[] = await res.json();
+  const data = await apiFetch<AccountAPI[]>("/accounts/?limit=500");
   return data.map(mapAccount);
 }
 
@@ -73,28 +70,25 @@ export async function fetchJournalEntries(
   if (filters?.accountId) params.set("account_id", filters.accountId);
   if (filters?.referenceType) params.set("reference_type", filters.referenceType);
 
-  const res = await fetch(`${baseUrl}/journal-entries/?${params.toString()}`);
-  if (!res.ok) throw new Error("Failed to fetch journal entries");
-  const data: JournalEntryAPI[] = await res.json();
+  const data = await apiFetch<JournalEntryAPI[]>(
+    `/journal-entries/?${params.toString()}`
+  );
   return data.map(mapJournalEntry);
 }
 
 export async function fetchJournalEntryDetail(
   id: string
 ): Promise<JournalEntry> {
-  const res = await fetch(`${baseUrl}/journal-entries/${id}`);
-  if (!res.ok) throw new Error("Journal entry not found");
-  const data: JournalEntryAPI = await res.json();
+  const data = await apiFetch<JournalEntryAPI>(`/journal-entries/${id}`);
   return mapJournalEntry(data);
 }
 
 export async function createManualJournalEntry(
   form: ManualJournalEntryForm
 ): Promise<JournalEntry> {
-  const res = await fetch(`${baseUrl}/journal-entries/`, {
+  const data = await apiFetch<JournalEntryAPI>("/journal-entries/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    json: {
       entry_date: form.entryDate,
       description: form.description,
       reference_type: form.referenceType || "adjustment",
@@ -104,13 +98,8 @@ export async function createManualJournalEntry(
         credit: l.credit,
         description: l.description || null,
       })),
-    }),
+    },
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || "Failed to create journal entry");
-  }
-  const data: JournalEntryAPI = await res.json();
   return mapJournalEntry(data);
 }
 
@@ -120,9 +109,13 @@ export async function fetchTrialBalance(
   asOf?: string
 ): Promise<TrialBalanceReport> {
   const params = asOf ? `?as_of=${asOf}` : "";
-  const res = await fetch(`${baseUrl}/reports/trial-balance${params}`);
-  if (!res.ok) throw new Error("Failed to fetch trial balance");
-  const data = await res.json();
+  const data = await apiFetch<{
+    as_of: string;
+    accounts: { account_code: string; account_name: string; account_type: string; total_debit: number; total_credit: number; balance: number }[];
+    total_debit: number;
+    total_credit: number;
+    is_balanced: boolean;
+  }>(`/reports/trial-balance${params}`);
   return {
     asOf: data.as_of,
     accounts: data.accounts.map(
@@ -145,11 +138,15 @@ export async function fetchProfitLoss(
   from: string,
   to: string
 ): Promise<ProfitLossReport> {
-  const res = await fetch(
-    `${baseUrl}/reports/profit-loss?from=${from}&to=${to}`
-  );
-  if (!res.ok) throw new Error("Failed to fetch P&L report");
-  const data = await res.json();
+  const data = await apiFetch<{
+    from: string;
+    to: string;
+    income: { account_code: string; account_name: string; amount: number }[];
+    expenses: { account_code: string; account_name: string; amount: number }[];
+    total_income: number;
+    total_expenses: number;
+    net_profit: number;
+  }>(`/reports/profit-loss?from=${from}&to=${to}`);
   return {
     from: data.from,
     to: data.to,
@@ -177,9 +174,16 @@ export async function fetchBalanceSheet(
   asOf?: string
 ): Promise<BalanceSheetReport> {
   const params = asOf ? `?as_of=${asOf}` : "";
-  const res = await fetch(`${baseUrl}/reports/balance-sheet${params}`);
-  if (!res.ok) throw new Error("Failed to fetch balance sheet");
-  const data = await res.json();
+  const data = await apiFetch<{
+    as_of: string;
+    assets: { account_code: string; account_name: string; balance: number }[];
+    liabilities: { account_code: string; account_name: string; balance: number }[];
+    equity: { account_code: string; account_name: string; balance: number }[];
+    total_assets: number;
+    total_liabilities: number;
+    total_equity: number;
+    is_balanced: boolean;
+  }>(`/reports/balance-sheet${params}`);
   const mapItem = (i: { account_code: string; account_name: string; balance: number }) => ({
     accountCode: i.account_code,
     accountName: i.account_name,
@@ -198,9 +202,10 @@ export async function fetchBalanceSheet(
 }
 
 export async function fetchAgingReceivables(): Promise<AgingReceivablesReport> {
-  const res = await fetch(`${baseUrl}/reports/aging-receivables`);
-  if (!res.ok) throw new Error("Failed to fetch aging receivables");
-  const data = await res.json();
+  const data = await apiFetch<{
+    as_of: string;
+    customers: { customer_id: string; customer_name: string; current: number; days_31_60: number; days_61_90: number; days_90_plus: number; total: number }[];
+  }>("/reports/aging-receivables");
   return {
     asOf: data.as_of,
     customers: data.customers.map(

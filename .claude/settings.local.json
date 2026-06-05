@@ -22,7 +22,14 @@
       "Bash(npm run typecheck:*)",
       "WebFetch(domain:tanstack.com)",
       "WebFetch(domain:react-hook-form.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Read(//c/Users/npilla/Videos/sske/docs//**)",
+      "Read(//c/Users/npilla/.claude/projects/C--Users-npilla-Videos-sske-sske-2-0/memory//**)",
+      "PowerShell(python \"C:\\\\Users\\\\npilla\\\\Downloads\\\\merge_products.py\")"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "shadcn"
+  ]
 }

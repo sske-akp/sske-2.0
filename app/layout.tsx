@@ -1,13 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
-import { SidebarProvider } from "@/components/ui/sidebar";
-import AppSideBar from '@/components/utils/sidebar';
-import NavAppBar from '@/components/utils/navbar';
-import CommandPane from "@/components/utils/command-pane";
-import { Toaster } from "@/components/ui/sonner"
-// import { QueryClient, QueryClientProvider, HydrationBoundary, dehydrate } from "@tanstack/react-query";
+import AppShell from "@/components/utils/AppShell";
 import QueryProviderWrapper from "@/components/QueryProviderWrapper";
+import AuthProvider from "@/components/providers/AuthProvider";
 
 
 export const metadata: Metadata = {
@@ -32,15 +28,9 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <QueryProviderWrapper>
-              <SidebarProvider>
-                <AppSideBar />
-                <main className="w-full">
-                  <NavAppBar />
-                  <CommandPane />
-                  <div className="px-4">{children}</div>
-                  <Toaster />
-                </main>
-              </SidebarProvider>
+              <AuthProvider>
+                <AppShell>{children}</AppShell>
+              </AuthProvider>
             </QueryProviderWrapper>
           </ThemeProvider>
 

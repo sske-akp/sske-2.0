@@ -8,8 +8,7 @@ import {
 } from "@/types/invoices";
 import { fetchCustomers } from "@/services/customersServices";
 import { ProductWithBatchesAPI } from "@/types/products";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "@/lib/apiClient";
 
 export function generateInvoiceNumber(): string {
   const now = new Date();
@@ -47,26 +46,20 @@ function mapInvoiceAPIToUI(
 }
 
 export async function fetchInvoices(): Promise<Invoice[]> {
-  const [invoicesRes, customers] = await Promise.all([
-    fetch(`${baseUrl}/invoices/`),
+  const [data, customers] = await Promise.all([
+    apiFetch<InvoiceAPI[]>("/invoices/"),
     fetchCustomers(),
   ]);
 
-  if (!invoicesRes.ok) {
-    throw new Error("Failed to fetch invoices");
-  }
-
   const customerMap = new Map(customers.map((c) => [c.id, c.name]));
-  const data: InvoiceAPI[] = await invoicesRes.json();
   return data.map((inv) => mapInvoiceAPIToUI(inv, customerMap));
 }
 
 export async function createInvoice(form: InvoiceFormData): Promise<Invoice> {
   // Atomic creation: invoice + all items in one request
-  const response = await fetch(`${baseUrl}/invoices/with_items/`, {
+  const newInvoice = await apiFetch<InvoiceAPI>("/invoices/with_items/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    json: {
       invoice_number: form.invoiceNumber,
       customer_id: form.customerId || null,
       invoice_date: form.invoiceDate,
@@ -85,14 +78,9 @@ export async function createInvoice(form: InvoiceFormData): Promise<Invoice> {
         total_price: item.totalPrice,
         is_official: true,
       })),
-    }),
+    },
   });
 
-  if (!response.ok) {
-    throw new Error("Failed to create invoice");
-  }
-
-  const newInvoice: InvoiceAPI = await response.json();
   return {
     id: newInvoice.id,
     invoiceNumber: newInvoice.invoice_number,
@@ -113,17 +101,11 @@ export async function createInvoice(form: InvoiceFormData): Promise<Invoice> {
 }
 
 export async function fetchInvoiceDetail(id: string): Promise<InvoiceDetail> {
-  const [invoiceRes, productsRes, customers] = await Promise.all([
-    fetch(`${baseUrl}/invoices/${id}`),
-    fetch(`${baseUrl}/products/with_batches/`),
+  const [invoice, products, customers] = await Promise.all([
+    apiFetch<InvoiceAPI>(`/invoices/${id}`),
+    apiFetch<ProductWithBatchesAPI[]>("/products/with_batches/"),
     fetchCustomers(),
   ]);
-
-  if (!invoiceRes.ok) throw new Error("Invoice not found");
-  if (!productsRes.ok) throw new Error("Failed to fetch products");
-
-  const invoice: InvoiceAPI = await invoiceRes.json();
-  const products: ProductWithBatchesAPI[] = await productsRes.json();
 
   const productMap = new Map(products.map((p) => [p.id, p.item]));
   const customer = customers.find((c) => c.id === invoice.customer_id);
@@ -161,19 +143,13 @@ export async function fetchInvoiceDetail(id: string): Promise<InvoiceDetail> {
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
-  const response = await fetch(`${baseUrl}/invoices/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete invoice");
-  }
+  await apiFetch<void>(`/invoices/${id}`, { method: "DELETE", parse: "none" });
 }
 
 export async function recordPayment(form: PaymentFormData): Promise<unknown> {
-  const response = await fetch(`${baseUrl}/payments/`, {
+  return apiFetch<unknown>("/payments/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    json: {
       invoice_id: form.invoiceId,
       customer_id: form.customerId || null,
       amount: form.amount,
@@ -181,22 +157,14 @@ export async function recordPayment(form: PaymentFormData): Promise<unknown> {
       payment_date: form.paymentDate,
       reference_number: form.referenceNumber || null,
       notes: form.notes || null,
-    }),
+    },
   });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(errorBody || "Failed to record payment");
-  }
-
-  return response.json();
 }
 
 export async function createCreditNote(form: CreditNoteFormData): Promise<InvoiceAPI> {
-  const response = await fetch(`${baseUrl}/invoices/credit_note/`, {
+  return apiFetch<InvoiceAPI>("/invoices/credit_note/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    json: {
       reference_invoice_id: form.referenceInvoiceId,
       invoice_number: form.invoiceNumber,
       invoice_date: form.invoiceDate,
@@ -212,13 +180,6 @@ export async function createCreditNote(form: CreditNoteFormData): Promise<Invoic
         total_price: item.totalPrice,
         is_official: true,
       })),
-    }),
+    },
   });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(errorBody || "Failed to create credit note");
-  }
-
-  return response.json();
 }

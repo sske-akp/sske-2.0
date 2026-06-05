@@ -6,6 +6,8 @@ import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, Menu
 import { Button } from '@/components/ui/button';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from "next-themes";
+import CompanySelector from '@/components/utils/CompanySelector';
+import UserMenu from '@/components/utils/UserMenu';
 
 
 export default function AppNavBar() {
@@ -47,11 +49,13 @@ export default function AppNavBar() {
                 </MenubarContent>
             </MenubarMenu>
 
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-1">
+                <CompanySelector />
                 <Button className='flex-item' variant='ghost' size='icon' onClick={() => toggleTheme()}>
                     <Moon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                     <Sun className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                 </Button>
+                <UserMenu />
             </div>
         </Menubar>
 

@@ -1,7 +1,6 @@
 import { DashboardData, HomeDashboardData } from "@/types/reports";
 import { fetchCustomers } from "@/services/customersServices";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "@/lib/apiClient";
 
 interface DashboardAPIResponse {
   sales_metrics: {
@@ -26,12 +25,7 @@ interface DashboardAPIResponse {
 }
 
 export async function fetchDashboardData(): Promise<DashboardData> {
-  const response = await fetch(`${baseUrl}/reports/dashboard`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch dashboard data");
-  }
-
-  const data: DashboardAPIResponse = await response.json();
+  const data = await apiFetch<DashboardAPIResponse>("/reports/dashboard");
 
   return {
     salesMetrics: {
@@ -99,16 +93,11 @@ interface HomeAPIResponse {
 }
 
 export async function fetchHomeDashboard(): Promise<HomeDashboardData> {
-  const [homeRes, customers] = await Promise.all([
-    fetch(`${baseUrl}/reports/home`),
+  const [data, customers] = await Promise.all([
+    apiFetch<HomeAPIResponse>("/reports/home"),
     fetchCustomers(),
   ]);
 
-  if (!homeRes.ok) {
-    throw new Error("Failed to fetch home dashboard");
-  }
-
-  const data: HomeAPIResponse = await homeRes.json();
   const customerMap = new Map(customers.map((c) => [c.id, c.name]));
 
   return {

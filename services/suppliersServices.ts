@@ -1,6 +1,5 @@
 import { Supplier, SupplierAPI, SupplierFormData } from "@/types/suppliers";
-
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+import { apiFetch } from "@/lib/apiClient";
 
 function mapAPIToSupplier(api: SupplierAPI): Supplier {
   return {
@@ -24,45 +23,26 @@ function mapFormToAPI(form: SupplierFormData) {
 }
 
 export async function fetchSuppliers(): Promise<Supplier[]> {
-  const response = await fetch(`${baseUrl}/suppliers/`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch suppliers");
-  }
-  const data: SupplierAPI[] = await response.json();
+  const data = await apiFetch<SupplierAPI[]>("/suppliers/");
   return data.map(mapAPIToSupplier);
 }
 
 export async function createSupplier(form: SupplierFormData): Promise<Supplier> {
-  const response = await fetch(`${baseUrl}/suppliers/`, {
+  const data = await apiFetch<SupplierAPI>("/suppliers/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(mapFormToAPI(form)),
+    json: mapFormToAPI(form),
   });
-  if (!response.ok) {
-    throw new Error("Failed to create supplier");
-  }
-  const data: SupplierAPI = await response.json();
   return mapAPIToSupplier(data);
 }
 
 export async function updateSupplier(id: string, form: SupplierFormData): Promise<Supplier> {
-  const response = await fetch(`${baseUrl}/suppliers/${id}`, {
+  const data = await apiFetch<SupplierAPI>(`/suppliers/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(mapFormToAPI(form)),
+    json: mapFormToAPI(form),
   });
-  if (!response.ok) {
-    throw new Error("Failed to update supplier");
-  }
-  const data: SupplierAPI = await response.json();
   return mapAPIToSupplier(data);
 }
 
 export async function deleteSupplier(id: string): Promise<void> {
-  const response = await fetch(`${baseUrl}/suppliers/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete supplier");
-  }
+  await apiFetch<void>(`/suppliers/${id}`, { method: "DELETE", parse: "none" });
 }
