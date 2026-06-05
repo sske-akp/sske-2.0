@@ -3,6 +3,7 @@ import {
     SidebarMenuItem, SidebarMenuButton, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton
 } from '@/components/ui/sidebar'
 import React from 'react'
+import Link from 'next/link'
 import sidebarItems from './sidebar-items';
 
 
@@ -19,19 +20,19 @@ export default function AppSideBar() {
                             {sidebarItems.map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild>
-                                        <a href={item.url}>
+                                        <Link href={item.url}>
                                             <item.icon />
                                             <span>{item.title}</span>
-                                        </a>
+                                        </Link>
                                     </SidebarMenuButton>
                                     {item.subItems?.map((subItem) => (
                                         <SidebarMenuSub key={subItem.title}>
                                             <SidebarMenuSubItem key={subItem.title}>
                                                 <SidebarMenuSubButton asChild>
-                                                    <a href={subItem.url}>
+                                                    <Link href={subItem.url}>
                                                         <subItem.icon />
                                                         <span>{subItem.title}</span>
-                                                    </a>
+                                                    </Link>
                                                 </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>
                                         </SidebarMenuSub>
