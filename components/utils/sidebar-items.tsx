@@ -21,6 +21,7 @@ import {
     ScanSearch,
     Receipt,
     NotebookPen,
+    Zap,
 } from "lucide-react";
 
 
@@ -86,6 +87,11 @@ const sidebarItems = [
                 title: "Brands",
                 url: "/products/brands",
                 icon: Bookmark,
+            },
+            {
+                title: "Manage Motors",
+                url: "/manage_motors",
+                icon: Zap,
             },
         ]
     },
