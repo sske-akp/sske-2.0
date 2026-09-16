@@ -160,23 +160,52 @@ export function CameraBarcodeScanner({
 
       // Check if already in scanned session list
       setScannedItems((prev) => {
-        const alreadyExists = prev.some(
-          (item) => item.serial.toLowerCase() === parsed.serial.toLowerCase()
+        const normSerial = parsed.serial.toLowerCase();
+        const normType = (parsed.itemType || "").toUpperCase();
+
+        // Exact duplicate check: same serial number AND same unit type
+        const exactDuplicate = prev.find(
+          (item) =>
+            item.serial.toLowerCase() === normSerial &&
+            (item.itemType || "").toUpperCase() === normType
         );
 
-        if (alreadyExists) {
+        if (exactDuplicate) {
           playErrorBeep();
-          toast.warning(`Serial ${parsed.serial} was already scanned in this batch`);
+          const typeName =
+            normType === "P"
+              ? "Pump (P)"
+              : normType === "M"
+              ? "Motor (M)"
+              : "";
+          toast.warning(
+            `Serial ${parsed.serial}${typeName ? ` ${typeName}` : ""} was already scanned in this batch`
+          );
           return prev;
         }
 
+        // Check if complementary pair was already scanned (P then M, or M then P)
+        const complementaryPair = prev.find(
+          (item) =>
+            item.serial.toLowerCase() === normSerial &&
+            ((item.itemType === "P" && normType === "M") ||
+              (item.itemType === "M" && normType === "P"))
+        );
+
         playSuccessBeep();
         const typeLabel = getItemTypeLabel(parsed.itemType);
-        const toastMsg = parsed.model
-          ? `Scanned: ${parsed.serial} (${parsed.model}${typeLabel ? ` • ${typeLabel}` : ""})`
-          : `Scanned: ${parsed.serial}`;
 
-        toast.success(toastMsg);
+        if (complementaryPair) {
+          toast.success(
+            `✓ Complete Set! Paired Motor & Pump for serial ${parsed.serial}`
+          );
+        } else {
+          const toastMsg = parsed.model
+            ? `Scanned: ${parsed.serial} (${parsed.model}${typeLabel ? ` • ${typeLabel}` : ""})`
+            : `Scanned: ${parsed.serial}${typeLabel ? ` • ${typeLabel}` : ""}`;
+          toast.success(toastMsg);
+        }
+
         setLastScanned(parsed);
 
         // If continuous mode is disabled, auto commit single scan
@@ -367,10 +396,10 @@ export function CameraBarcodeScanner({
     await startScanner(newCamId);
   };
 
-  // Remove a scanned item from current batch
-  const handleRemoveScanned = (serialToRemove: string) => {
+  // Remove a scanned item from current batch by index
+  const handleRemoveScanned = (indexToRemove: number) => {
     setScannedItems((prev) =>
-      prev.filter((item) => item.serial !== serialToRemove)
+      prev.filter((_, idx) => idx !== indexToRemove)
     );
   };
 
@@ -618,9 +647,9 @@ export function CameraBarcodeScanner({
                 No items scanned yet. Point the camera at any motor barcode.
               </div>
             ) : (
-              scannedItems.map((item) => (
+              scannedItems.map((item, idx) => (
                 <div
-                  key={item.serial}
+                  key={`${item.serial}_${item.itemType || "raw"}_${idx}`}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background border shadow-2xs text-xs font-mono"
                 >
                   <span className="font-bold">{item.serial}</span>
@@ -639,7 +668,7 @@ export function CameraBarcodeScanner({
 
                   <button
                     type="button"
-                    onClick={() => handleRemoveScanned(item.serial)}
+                    onClick={() => handleRemoveScanned(idx)}
                     className="ml-1 rounded-full p-0.5 hover:bg-destructive/20 hover:text-destructive focus:outline-hidden"
                     title={`Remove ${item.serial}`}
                   >
