@@ -3,6 +3,7 @@ export interface MotorAPI {
   hp: string;
   model?: string | null;
   serials: string[];
+  is_dual_set?: boolean;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -11,6 +12,7 @@ export interface MotorFormData {
   hp: string;
   model?: string | null;
   serials?: string[];
+  is_dual_set?: boolean;
 }
 
 export interface MotorSerialsAddBatch {
@@ -26,7 +28,9 @@ export interface MotorModelView {
   id: string;
   name: string;
   serials: string[];
-  createdAt?: string;
+  isDualSet?: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface HpCategoryView {

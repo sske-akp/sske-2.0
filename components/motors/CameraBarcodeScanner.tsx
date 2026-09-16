@@ -376,12 +376,13 @@ export function CameraBarcodeScanner({
 
   // Confirm and submit all scanned serials
   const handleConfirmBatch = () => {
-    if (!selectedModelId) {
-      toast.error("Please select a target motor model");
-      return;
-    }
     if (scannedItems.length === 0) {
       toast.error("No serial numbers scanned yet");
+      return;
+    }
+
+    if (!selectedModelId && !scannedItems.some((item) => Boolean(item.model))) {
+      toast.error("Please select a target motor model");
       return;
     }
 
@@ -395,8 +396,10 @@ export function CameraBarcodeScanner({
       new Set(scannedItems.map((item) => item.serial))
     );
 
-    onAddSerials(selectedModelId, uniqueSerials);
-    toast.success(`Added ${uniqueSerials.length} serials to model`);
+    if (selectedModelId) {
+      onAddSerials(selectedModelId, uniqueSerials);
+      toast.success(`Added ${uniqueSerials.length} serials to model`);
+    }
     onOpenChange(false);
   };
 
@@ -449,9 +452,20 @@ export function CameraBarcodeScanner({
             onValueChange={setSelectedModelId}
           >
             <SelectTrigger className="h-8 text-xs max-w-sm font-medium">
-              <SelectValue placeholder="Select target model..." />
+              <SelectValue
+                placeholder={
+                  availableModels.length === 0
+                    ? "Auto-detect model from barcode"
+                    : "Select target model..."
+                }
+              />
             </SelectTrigger>
             <SelectContent>
+              {availableModels.length === 0 && (
+                <SelectItem value="auto" disabled>
+                  Auto-detect model from barcode
+                </SelectItem>
+              )}
               {availableModels.map((m) => (
                 <SelectItem key={m.modelId} value={m.modelId}>
                   <span className="font-semibold text-amber-600 mr-1.5">
@@ -652,7 +666,10 @@ export function CameraBarcodeScanner({
             type="button"
             size="sm"
             onClick={handleConfirmBatch}
-            disabled={scannedItems.length === 0 || !selectedModelId}
+            disabled={
+              scannedItems.length === 0 ||
+              (!selectedModelId && !scannedItems.some((i) => Boolean(i.model)))
+            }
             className="gap-1.5 font-medium"
           >
             <CheckCircle2 className="h-4 w-4" />
