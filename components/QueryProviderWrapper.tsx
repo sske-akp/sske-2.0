@@ -18,7 +18,7 @@ export default function QueryProviderWrapper({ children, initialState = {} }: Pr
 
     return (
         <QueryClientProvider client={queryClient}>
-            <HydrationBoundary state={initialState}>
+            <HydrationBoundary state={initialState as any}>
                 {children}
                 <ReactQueryDevtools initialIsOpen={false} />
             </HydrationBoundary>

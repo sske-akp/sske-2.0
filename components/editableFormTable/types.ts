@@ -81,9 +81,9 @@ export type ColumnConfig<TRow extends FieldValues> =
   | CustomColumn<TRow>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyFormReturn = UseFormReturn<any, any, any>;
+export type AnyFormReturn = UseFormReturn<any, any, any> | UseFormReturn<any>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyFieldArrayReturn = UseFieldArrayReturn<any, any, any>;
+export type AnyFieldArrayReturn = UseFieldArrayReturn<any, any, any> | UseFieldArrayReturn<any>;
 
 export interface EditableFormTableProps<TRow extends FieldValues> {
   columns: ColumnConfig<TRow>[];

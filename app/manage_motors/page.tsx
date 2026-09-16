@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { MotorAPI, HpCategoryView, MotorModelView } from "@/types/motors";
+import React, { useState, useMemo } from "react";
 import {
   useMotors,
   useCreateMotor,
@@ -12,24 +11,18 @@ import {
   useRenameHpCategory,
   useDeleteHpCategory,
 } from "@/hooks/motorsHooks";
-import {
-  loadMotorData,
-  saveMotorData,
-  DEFAULT_MOTOR_DATA,
-} from "@/app/manage_motors/storage";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -42,13 +35,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -56,7 +42,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Zap,
   Plus,
   X,
   Search,
@@ -66,15 +51,21 @@ import {
   Check,
   RotateCcw,
   Download,
-  Upload,
-  MoreVertical,
   Boxes,
   Layers,
   Cpu,
   Package,
   Database,
-  CloudOff,
+  Camera,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
+import {
+  CameraBarcodeScanner,
+  TargetModelOption,
+} from "@/components/motors/CameraBarcodeScanner";
+import { ParsedBarcodeResult } from "@/lib/barcodeParser";
+import { MotorAPI } from "@/types/motors";
 
 // Common HP presets for quick selection
 const HP_PRESETS = [
@@ -87,16 +78,32 @@ const HP_PRESETS = [
   "5.0 HP",
   "7.5 HP",
   "10.0 HP",
-  "12.5 HP",
-  "15.0 HP",
 ];
 
+export interface MotorModelView {
+  id: string;
+  name: string;
+  serials: string[];
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface HpCategoryView {
+  id: string;
+  hp: string;
+  models: MotorModelView[];
+}
+
 export default function ManageMotorsPage() {
-  // Backend React Query hooks
+  // --------------------------------------------------------------------------
+  // Live Backend Data & Mutations
+  // --------------------------------------------------------------------------
   const {
-    data: apiMotors,
-    isLoading: isApiLoading,
-    isError: isApiError,
+    data: apiMotors = [],
+    isLoading,
+    isError,
+    error: apiError,
+    refetch,
   } = useMotors();
 
   const createMotorMutation = useCreateMotor();
@@ -107,18 +114,14 @@ export default function ManageMotorsPage() {
   const renameHpMutation = useRenameHpCategory();
   const deleteHpMutation = useDeleteHpCategory();
 
-  // Local storage fallback state (used if backend is offline or before DB connection)
-  const [localData, setLocalData] = useState<HpCategoryView[]>([]);
-  const [isLocalLoaded, setIsLocalLoaded] = useState(false);
-
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedHpFilter, setSelectedHpFilter] = useState<string>("ALL");
 
-  // Inline serial input state: mapping of modelId -> string
+  // Inline serial addition input state map: { [modelId: string]: string }
   const [serialInputs, setSerialInputs] = useState<Record<string, string>>({});
 
-  // Dialog states
+  // Modals state
   const [isAddHpOpen, setIsAddHpOpen] = useState(false);
   const [newHpName, setNewHpName] = useState("");
 
@@ -132,79 +135,218 @@ export default function ManageMotorsPage() {
   const [isAddModelOpen, setIsAddModelOpen] = useState(false);
   const [targetHpForModel, setTargetHpForModel] = useState<string>("");
   const [newModelName, setNewModelName] = useState("");
-  const [newModelSerials, setNewModelSerials] = useState("");
+  const [newModelSerialsInput, setNewModelSerialsInput] = useState("");
 
   const [editModelTarget, setEditModelTarget] = useState<{
     hp: string;
     model: MotorModelView;
   } | null>(null);
   const [editModelName, setEditModelName] = useState("");
+  const [editModelHp, setEditModelHp] = useState("");
 
   const [deleteModelTarget, setDeleteModelTarget] = useState<{
     hp: string;
     model: MotorModelView;
   } | null>(null);
 
-  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
-  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  // Camera Scanner Modal State
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerTargetModelId, setScannerTargetModelId] = useState<
+    string | undefined
+  >(undefined);
 
   // Copied serials state for quick visual feedback
   const [copiedModelId, setCopiedModelId] = useState<string | null>(null);
 
-  // File input ref for import
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Load local data once
-  useEffect(() => {
-    const loaded = loadMotorData();
-    setLocalData(loaded);
-    setIsLocalLoaded(true);
-  }, []);
-
-  // Determine if using backend data or local fallback
-  const isUsingBackend = !isApiError && Array.isArray(apiMotors);
-
   // --------------------------------------------------------------------------
-  // Group Backend Data into HP Categories View
+  // Group Live Backend Data into HP Categories
   // --------------------------------------------------------------------------
   const groupedData: HpCategoryView[] = useMemo(() => {
-    if (isUsingBackend && apiMotors) {
-      const map = new Map<string, MotorModelView[]>();
+    if (!apiMotors || !Array.isArray(apiMotors)) return [];
 
-      apiMotors.forEach((item: MotorAPI) => {
-        if (!map.has(item.hp)) {
-          map.set(item.hp, []);
-        }
-        // If the row has a model name, add it as a model
-        if (item.model && item.model.trim()) {
-          map.get(item.hp)!.push({
-            id: item.id,
-            name: item.model,
-            serials: Array.isArray(item.serials) ? item.serials : [],
-            createdAt: item.created_at || undefined,
-          });
-        }
+    const map = new Map<string, MotorModelView[]>();
+
+    apiMotors.forEach((item: MotorAPI) => {
+      if (!map.has(item.hp)) {
+        map.set(item.hp, []);
+      }
+      if (item.model) {
+        map.get(item.hp)!.push({
+          id: item.id,
+          name: item.model,
+          serials: Array.isArray(item.serials) ? item.serials : [],
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+        });
+      }
+    });
+
+    return Array.from(map.entries()).map(([hp, models]) => ({
+      id: `hp-${hp}`,
+      hp,
+      models,
+    }));
+  }, [apiMotors]);
+
+  // Flat list of all models for target selection in camera scanner
+  const availableModelsForScanner: TargetModelOption[] = useMemo(() => {
+    const list: TargetModelOption[] = [];
+    groupedData.forEach((hp) => {
+      hp.models.forEach((m) => {
+        list.push({
+          hp: hp.hp,
+          modelId: m.id,
+          modelName: m.name,
+        });
       });
+    });
+    return list;
+  }, [groupedData]);
 
-      return Array.from(map.entries()).map(([hp, models]) => ({
-        id: hp,
-        hp,
-        models,
-      }));
-    }
+  // --------------------------------------------------------------------------
+  // Camera Scanner Handlers (Direct Live Backend Integration)
+  // --------------------------------------------------------------------------
+  const handleOpenScanner = (modelId?: string) => {
+    setScannerTargetModelId(modelId);
+    setIsScannerOpen(true);
+  };
 
-    return localData;
-  }, [isUsingBackend, apiMotors, localData]);
+  const handleScannerAddSerials = (
+    targetModelId: string,
+    serials: string[]
+  ) => {
+    if (serials.length === 0) return;
 
-  // Helper to sync local state if running locally
-  const updateLocalData = (newData: HpCategoryView[]) => {
-    setLocalData(newData);
-    saveMotorData(newData);
+    addSerialsMutation.mutate(
+      { id: targetModelId, serials },
+      {
+        onSuccess: () => {
+          toast.success(`Added ${serials.length} scanned serials to model`);
+        },
+        onError: (err) => {
+          toast.error("Failed to add serials: " + err.message);
+        },
+      }
+    );
+  };
+
+  const handleScannerAddParsedBatch = (
+    items: ParsedBarcodeResult[],
+    fallbackModelId: string
+  ) => {
+    if (items.length === 0) return;
+
+    // Find fallback model info
+    const fallbackOption = availableModelsForScanner.find(
+      (m) => m.modelId === fallbackModelId
+    );
+    const fallbackHp =
+      fallbackOption?.hp ||
+      (groupedData.length > 0 ? groupedData[0].hp : "1.0 HP");
+    const fallbackModelName =
+      fallbackOption?.modelName || "Standard Model";
+
+    // Group scanned items by normalized model name
+    const groups = new Map<string, { modelName: string; serials: string[] }>();
+
+    items.forEach((item) => {
+      const modelKey = item.model
+        ? item.model.replace(/\s*\+\s*/g, "+").trim()
+        : fallbackModelName;
+
+      if (!groups.has(modelKey)) {
+        groups.set(modelKey, { modelName: modelKey, serials: [] });
+      }
+      groups.get(modelKey)!.serials.push(item.serial);
+    });
+
+    groups.forEach(({ modelName, serials }, key) => {
+      const uniqueSerials = Array.from(new Set(serials));
+      // Find if this model exists in live inventory
+      const existing = availableModelsForScanner.find(
+        (m) =>
+          m.modelName.replace(/\s*\+\s*/g, "+").toLowerCase() ===
+          key.toLowerCase()
+      );
+
+      if (existing) {
+        // Model exists -> append serials
+        addSerialsMutation.mutate(
+          { id: existing.modelId, serials: uniqueSerials },
+          {
+            onSuccess: () => {
+              toast.success(
+                `Added ${uniqueSerials.length} serials to ${existing.modelName}`
+              );
+            },
+            onError: (err) => {
+              toast.error(`Failed to add serials: ${err.message}`);
+            },
+          }
+        );
+      } else {
+        // Model does NOT exist -> create model under fallbackHp or target HP
+        createMotorMutation.mutate(
+          {
+            hp: fallbackHp,
+            model: modelName,
+            serials: uniqueSerials,
+          },
+          {
+            onSuccess: () => {
+              toast.success(
+                `Created new model "${modelName}" under ${fallbackHp} with ${uniqueSerials.length} serials`
+              );
+            },
+            onError: (err) => {
+              toast.error(`Failed to create model: ${err.message}`);
+            },
+          }
+        );
+      }
+    });
   };
 
   // --------------------------------------------------------------------------
-  // Summary Stats
+  // Computed Filtered & Searched Data
   // --------------------------------------------------------------------------
+  const filteredData = useMemo(() => {
+    let list = groupedData;
+
+    if (selectedHpFilter !== "ALL") {
+      list = list.filter((hp) => hp.hp === selectedHpFilter);
+    }
+
+    if (!searchQuery.trim()) {
+      return list;
+    }
+
+    const q = searchQuery.toLowerCase().trim();
+
+    return list
+      .map((hp) => {
+        const hpMatches = hp.hp.toLowerCase().includes(q);
+
+        const matchingModels = hp.models.filter((model) => {
+          const modelMatches = model.name.toLowerCase().includes(q);
+          const serialMatches = model.serials.some((s) =>
+            s.toLowerCase().includes(q)
+          );
+          return modelMatches || serialMatches || hpMatches;
+        });
+
+        if (matchingModels.length > 0) {
+          return {
+            ...hp,
+            models: matchingModels,
+          };
+        }
+        return null;
+      })
+      .filter((item): item is HpCategoryView => item !== null);
+  }, [groupedData, selectedHpFilter, searchQuery]);
+
+  // Overall Statistics
   const stats = useMemo(() => {
     const totalHp = groupedData.length;
     let totalModels = 0;
@@ -221,130 +363,45 @@ export default function ManageMotorsPage() {
   }, [groupedData]);
 
   // --------------------------------------------------------------------------
-  // Filtered & Searched Data
+  // Handlers: Inline Serials
   // --------------------------------------------------------------------------
-  const filteredData = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+  const handleSerialInputChange = (modelId: string, val: string) => {
+    setSerialInputs((prev) => ({ ...prev, [modelId]: val }));
+  };
 
-    return groupedData
-      .filter((hp) => {
-        if (selectedHpFilter !== "ALL" && hp.hp !== selectedHpFilter) {
-          return false;
-        }
-        return true;
-      })
-      .map((hp) => {
-        if (!query) return hp;
+  const handleAddSerial = (
+    e: React.FormEvent,
+    hpCategory: string,
+    modelId: string
+  ) => {
+    e.preventDefault();
+    const rawVal = serialInputs[modelId] || "";
+    if (!rawVal.trim()) return;
 
-        const hpMatches = hp.hp.toLowerCase().includes(query);
-
-        // Filter models that match query OR have serials that match
-        const matchingModels = hp.models.filter((model) => {
-          if (hpMatches) return true;
-          const nameMatches = model.name.toLowerCase().includes(query);
-          const serialMatches = model.serials.some((s) =>
-            s.toLowerCase().includes(query)
-          );
-          return nameMatches || serialMatches;
-        });
-
-        return {
-          ...hp,
-          models: matchingModels,
-        };
-      })
-      .filter((hp) => {
-        if (!query) return true;
-        const hpMatches = hp.hp.toLowerCase().includes(query);
-        return hpMatches || hp.models.length > 0;
-      });
-  }, [groupedData, searchQuery, selectedHpFilter]);
-
-  // --------------------------------------------------------------------------
-  // Serial Operations
-  // --------------------------------------------------------------------------
-  const handleAddSerial = (hpCategory: string, modelId: string) => {
-    const rawInput = serialInputs[modelId] || "";
-    if (!rawInput.trim()) return;
-
-    // Support comma, space, newline separated serials
-    const tokens = rawInput
+    // Support comma or whitespace separated bulk entry
+    const tokens = rawVal
       .split(/[\s,]+/)
       .map((s) => s.trim())
       .filter(Boolean);
 
     if (tokens.length === 0) return;
 
-    if (isUsingBackend) {
-      addSerialsMutation.mutate(
-        { id: modelId, serials: tokens },
-        {
-          onSuccess: () => {
-            toast.success(
-              tokens.length === 1
-                ? `Added serial: ${tokens[0]}`
-                : `Added ${tokens.length} serial numbers`
-            );
-            setSerialInputs((prev) => ({ ...prev, [modelId]: "" }));
-          },
-          onError: (err) => {
-            toast.error("Failed to add serials: " + err.message);
-          },
-        }
-      );
-      return;
-    }
-
-    // Local fallback
-    let addedCount = 0;
-    const duplicates: string[] = [];
-
-    const updated = localData.map((hp) => {
-      if (hp.hp !== hpCategory) return hp;
-      return {
-        ...hp,
-        models: hp.models.map((model) => {
-          if (model.id !== modelId) return model;
-
-          const existingSet = new Set(
-            model.serials.map((s) => s.toLowerCase())
+    addSerialsMutation.mutate(
+      { id: modelId, serials: tokens },
+      {
+        onSuccess: (data) => {
+          toast.success(
+            tokens.length === 1
+              ? `Added serial: ${tokens[0]}`
+              : `Added ${tokens.length} serials to model`
           );
-          const newSerialsToAdd: string[] = [];
-
-          tokens.forEach((token) => {
-            if (existingSet.has(token.toLowerCase())) {
-              duplicates.push(token);
-            } else {
-              existingSet.add(token.toLowerCase());
-              newSerialsToAdd.push(token);
-            }
-          });
-
-          addedCount = newSerialsToAdd.length;
-          return {
-            ...model,
-            serials: [...model.serials, ...newSerialsToAdd],
-          };
-        }),
-      };
-    });
-
-    if (addedCount > 0) {
-      updateLocalData(updated);
-      toast.success(
-        addedCount === 1
-          ? `Added serial: ${tokens[0]}`
-          : `Added ${addedCount} serial numbers`
-      );
-    }
-
-    if (duplicates.length > 0) {
-      toast.warning(
-        `Already exists in model: ${duplicates.slice(0, 3).join(", ")}`
-      );
-    }
-
-    setSerialInputs((prev) => ({ ...prev, [modelId]: "" }));
+          setSerialInputs((prev) => ({ ...prev, [modelId]: "" }));
+        },
+        onError: (err) => {
+          toast.error("Failed to add serials: " + err.message);
+        },
+      }
+    );
   };
 
   const handleRemoveSerial = (
@@ -352,363 +409,257 @@ export default function ManageMotorsPage() {
     modelId: string,
     serialToRemove: string
   ) => {
-    if (isUsingBackend) {
-      removeSerialMutation.mutate(
-        { id: modelId, serial: serialToRemove },
-        {
-          onSuccess: () => {
-            toast.info(`Removed serial: ${serialToRemove}`);
-          },
-          onError: (err) => {
-            toast.error("Failed to remove serial: " + err.message);
-          },
-        }
-      );
-      return;
-    }
-
-    // Local fallback
-    const updated = localData.map((hp) => {
-      if (hp.hp !== hpCategory) return hp;
-      return {
-        ...hp,
-        models: hp.models.map((model) => {
-          if (model.id !== modelId) return model;
-          return {
-            ...model,
-            serials: model.serials.filter((s) => s !== serialToRemove),
-          };
-        }),
-      };
-    });
-
-    updateLocalData(updated);
-    toast.info(`Removed serial: ${serialToRemove}`);
+    removeSerialMutation.mutate(
+      { id: modelId, serial: serialToRemove },
+      {
+        onSuccess: () => {
+          toast.info(`Removed serial: ${serialToRemove}`);
+        },
+        onError: (err) => {
+          toast.error("Failed to remove serial: " + err.message);
+        },
+      }
+    );
   };
 
   const handleCopySerials = (model: MotorModelView) => {
     if (model.serials.length === 0) {
-      toast.info("No serials to copy");
+      toast.info("No serial numbers to copy");
       return;
     }
-    const text = model.serials.join(", ");
+    const text = model.serials.join("\n");
     navigator.clipboard.writeText(text);
     setCopiedModelId(model.id);
-    toast.success(`Copied ${model.serials.length} serials to clipboard`);
+    toast.success(
+      `Copied ${model.serials.length} serial numbers to clipboard`
+    );
     setTimeout(() => {
       setCopiedModelId(null);
     }, 2000);
   };
 
   // --------------------------------------------------------------------------
-  // HP Range Operations
+  // Handlers: HP Category Management
   // --------------------------------------------------------------------------
   const handleOpenAddHp = () => {
     setNewHpName("");
     setIsAddHpOpen(true);
   };
 
-  const handleConfirmAddHp = (hpNameToAdd?: string) => {
-    const name = (hpNameToAdd || newHpName).trim();
+  const handleAddHp = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newHpName.trim();
     if (!name) {
-      toast.error("Please enter a valid HP rating");
+      toast.error("HP rating / category cannot be empty");
       return;
     }
 
     const exists = groupedData.some(
-      (item) => item.hp.toLowerCase() === name.toLowerCase()
+      (h) => h.hp.toLowerCase() === name.toLowerCase()
     );
     if (exists) {
-      toast.error(`"${name}" already exists`);
+      toast.error(`Category "${name}" already exists`);
       return;
     }
 
-    if (isUsingBackend) {
-      createMotorMutation.mutate(
-        { hp: name, model: null, serials: [] },
-        {
-          onSuccess: () => {
-            toast.success(`Added HP Category: ${name}`);
-            setIsAddHpOpen(false);
-            setNewHpName("");
-          },
-          onError: (err) => {
-            toast.error("Failed to add HP category: " + err.message);
-          },
-        }
-      );
-      return;
-    }
-
-    // Local fallback
-    const newCategory: HpCategoryView = {
-      id: `hp-${Date.now()}`,
-      hp: name,
-      models: [],
-    };
-
-    updateLocalData([...localData, newCategory]);
-    setIsAddHpOpen(false);
-    setNewHpName("");
-    toast.success(`Added HP Category: ${name}`);
+    createMotorMutation.mutate(
+      { hp: name, model: null, serials: [] },
+      {
+        onSuccess: () => {
+          toast.success(`Added HP Category: ${name}`);
+          setIsAddHpOpen(false);
+          setNewHpName("");
+        },
+        onError: (err) => {
+          toast.error("Failed to create HP category: " + err.message);
+        },
+      }
+    );
   };
 
-  const handleOpenEditHp = (hp: HpCategoryView) => {
-    setEditHpTarget(hp);
-    setEditHpName(hp.hp);
+  const handleOpenEditHp = (category: HpCategoryView) => {
+    setEditHpTarget(category);
+    setEditHpName(category.hp);
   };
 
-  const handleSaveEditHp = () => {
+  const handleEditHp = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!editHpTarget) return;
+
     const trimmed = editHpName.trim();
     if (!trimmed) {
-      toast.error("HP rating cannot be empty");
+      toast.error("HP value cannot be empty");
+      return;
+    }
+
+    if (trimmed.toLowerCase() === editHpTarget.hp.toLowerCase()) {
+      setEditHpTarget(null);
       return;
     }
 
     const exists = groupedData.some(
-      (item) =>
-        item.hp !== editHpTarget.hp &&
-        item.hp.toLowerCase() === trimmed.toLowerCase()
+      (h) =>
+        h.hp.toLowerCase() === trimmed.toLowerCase() &&
+        h.hp.toLowerCase() !== editHpTarget.hp.toLowerCase()
     );
     if (exists) {
-      toast.error(`"${trimmed}" already exists`);
+      toast.error(`Category "${trimmed}" already exists`);
       return;
     }
 
-    if (isUsingBackend) {
-      renameHpMutation.mutate(
-        { oldHp: editHpTarget.hp, newHp: trimmed },
-        {
-          onSuccess: () => {
-            toast.success(`Renamed HP category to ${trimmed}`);
-            setEditHpTarget(null);
-          },
-          onError: (err) => {
-            toast.error("Failed to rename HP: " + err.message);
-          },
-        }
-      );
-      return;
-    }
-
-    // Local fallback
-    const updated = localData.map((item) =>
-      item.hp === editHpTarget.hp ? { ...item, hp: trimmed } : item
+    renameHpMutation.mutate(
+      { oldHp: editHpTarget.hp, newHp: trimmed },
+      {
+        onSuccess: () => {
+          toast.success("HP rating updated");
+          setEditHpTarget(null);
+        },
+        onError: (err) => {
+          toast.error("Failed to rename HP: " + err.message);
+        },
+      }
     );
-
-    updateLocalData(updated);
-    setEditHpTarget(null);
-    toast.success("HP rating updated");
   };
 
   const handleDeleteHp = () => {
     if (!deleteHpTarget) return;
     const hpToDelete = deleteHpTarget.hp;
 
-    if (isUsingBackend) {
-      deleteHpMutation.mutate(hpToDelete, {
-        onSuccess: () => {
-          toast.success(`Deleted ${hpToDelete} category`);
-          if (selectedHpFilter === hpToDelete) {
-            setSelectedHpFilter("ALL");
-          }
-          setDeleteHpTarget(null);
-        },
-        onError: (err) => {
-          toast.error("Failed to delete HP: " + err.message);
-        },
-      });
-      return;
-    }
-
-    // Local fallback
-    const updated = localData.filter((item) => item.hp !== hpToDelete);
-    updateLocalData(updated);
-    if (selectedHpFilter === hpToDelete) {
-      setSelectedHpFilter("ALL");
-    }
-    toast.success(`Deleted ${hpToDelete}`);
-    setDeleteHpTarget(null);
+    deleteHpMutation.mutate(hpToDelete, {
+      onSuccess: () => {
+        toast.success(`Deleted ${hpToDelete} category`);
+        setDeleteHpTarget(null);
+        if (selectedHpFilter === hpToDelete) {
+          setSelectedHpFilter("ALL");
+        }
+      },
+      onError: (err) => {
+        toast.error("Failed to delete HP: " + err.message);
+      },
+    });
   };
 
   // --------------------------------------------------------------------------
-  // Model Operations
+  // Handlers: Model Management
   // --------------------------------------------------------------------------
-  const handleOpenAddModel = (hpName?: string) => {
-    setTargetHpForModel(
-      hpName || (groupedData.length > 0 ? groupedData[0].hp : "")
-    );
+  const handleOpenAddModel = (hp?: string) => {
+    const defaultHp = hp || groupedData[0]?.hp || "";
+    setTargetHpForModel(defaultHp);
     setNewModelName("");
-    setNewModelSerials("");
+    setNewModelSerialsInput("");
     setIsAddModelOpen(true);
   };
 
-  const handleConfirmAddModel = () => {
+  const handleAddModel = (e: React.FormEvent) => {
+    e.preventDefault();
     const modelName = newModelName.trim();
-    if (!modelName) {
-      toast.error("Model name is required");
-      return;
-    }
+
     if (!targetHpForModel) {
-      toast.error("Please select an HP rating");
+      toast.error("Please select an HP Category");
       return;
     }
 
-    // Parse initial serials if provided
-    const initialSerials = newModelSerials
+    if (!modelName) {
+      toast.error("Model name cannot be empty");
+      return;
+    }
+
+    const targetCategory = groupedData.find(
+      (h) => h.hp === targetHpForModel
+    );
+    if (
+      targetCategory &&
+      targetCategory.models.some(
+        (m) => m.name.toLowerCase() === modelName.toLowerCase()
+      )
+    ) {
+      toast.error(
+        `Model "${modelName}" already exists under ${targetHpForModel}`
+      );
+      return;
+    }
+
+    const initialSerials = newModelSerialsInput
       .split(/[\s,]+/)
       .map((s) => s.trim())
       .filter(Boolean);
 
     const uniqueSerials = Array.from(new Set(initialSerials));
 
-    if (isUsingBackend) {
-      createMotorMutation.mutate(
-        {
-          hp: targetHpForModel,
-          model: modelName,
-          serials: uniqueSerials,
+    createMotorMutation.mutate(
+      {
+        hp: targetHpForModel,
+        model: modelName,
+        serials: uniqueSerials,
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Added model: ${modelName}`);
+          setIsAddModelOpen(false);
+          setNewModelName("");
+          setNewModelSerialsInput("");
         },
-        {
-          onSuccess: () => {
-            toast.success(`Added model: ${modelName}`);
-            setIsAddModelOpen(false);
-          },
-          onError: (err) => {
-            toast.error("Failed to add model: " + err.message);
-          },
-        }
-      );
-      return;
-    }
-
-    // Local fallback
-    const newModel: MotorModelView = {
-      id: `mod-${Date.now()}`,
-      name: modelName,
-      serials: uniqueSerials,
-      createdAt: new Date().toISOString(),
-    };
-
-    const updated = localData.map((hp) => {
-      if (hp.hp !== targetHpForModel) return hp;
-      return {
-        ...hp,
-        models: [...hp.models, newModel],
-      };
-    });
-
-    updateLocalData(updated);
-    setIsAddModelOpen(false);
-    toast.success(`Added model: ${modelName}`);
+        onError: (err) => {
+          toast.error("Failed to add model: " + err.message);
+        },
+      }
+    );
   };
 
   const handleOpenEditModel = (hp: string, model: MotorModelView) => {
     setEditModelTarget({ hp, model });
     setEditModelName(model.name);
+    setEditModelHp(hp);
   };
 
-  const handleSaveEditModel = () => {
+  const handleEditModel = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!editModelTarget) return;
-    const trimmed = editModelName.trim();
-    if (!trimmed) {
+
+    const trimmedName = editModelName.trim();
+    if (!trimmedName) {
       toast.error("Model name cannot be empty");
       return;
     }
 
-    if (isUsingBackend) {
-      updateMotorMutation.mutate(
-        {
-          id: editModelTarget.model.id,
-          data: {
-            model: trimmed,
-          },
+    updateMotorMutation.mutate(
+      {
+        id: editModelTarget.model.id,
+        data: {
+          model: trimmedName,
+          hp: editModelHp,
         },
-        {
-          onSuccess: () => {
-            toast.success("Model updated");
-            setEditModelTarget(null);
-          },
-          onError: (err) => {
-            toast.error("Failed to update model: " + err.message);
-          },
-        }
-      );
-      return;
-    }
-
-    // Local fallback
-    const updated = localData.map((hp) => {
-      if (hp.hp !== editModelTarget.hp) return hp;
-      return {
-        ...hp,
-        models: hp.models.map((m) =>
-          m.id === editModelTarget.model.id
-            ? {
-                ...m,
-                name: trimmed,
-              }
-            : m
-        ),
-      };
-    });
-
-    updateLocalData(updated);
-    setEditModelTarget(null);
-    toast.success("Model updated");
+      },
+      {
+        onSuccess: () => {
+          toast.success("Model updated");
+          setEditModelTarget(null);
+        },
+        onError: (err) => {
+          toast.error("Failed to update model: " + err.message);
+        },
+      }
+    );
   };
 
   const handleDeleteModel = () => {
     if (!deleteModelTarget) return;
-    const { hp, model } = deleteModelTarget;
+    const { model } = deleteModelTarget;
 
-    if (isUsingBackend) {
-      deleteMotorMutation.mutate(model.id, {
-        onSuccess: () => {
-          toast.success(`Deleted model: ${model.name}`);
-          setDeleteModelTarget(null);
-        },
-        onError: (err) => {
-          toast.error("Failed to delete model: " + err.message);
-        },
-      });
-      return;
-    }
-
-    // Local fallback
-    const updated = localData.map((item) => {
-      if (item.hp !== hp) return item;
-      return {
-        ...item,
-        models: item.models.filter((m) => m.id !== model.id),
-      };
+    deleteMotorMutation.mutate(model.id, {
+      onSuccess: () => {
+        toast.success(`Deleted model: ${model.name}`);
+        setDeleteModelTarget(null);
+      },
+      onError: (err) => {
+        toast.error("Failed to delete model: " + err.message);
+      },
     });
-
-    updateLocalData(updated);
-    toast.success(`Deleted model: ${model.name}`);
-    setDeleteModelTarget(null);
   };
 
   // --------------------------------------------------------------------------
-  // Data Reset, Export & Import
+  // Data Export
   // --------------------------------------------------------------------------
-  const handleResetSampleData = () => {
-    updateLocalData(DEFAULT_MOTOR_DATA);
-    setIsResetConfirmOpen(false);
-    setSelectedHpFilter("ALL");
-    setSearchQuery("");
-    toast.success("Reset to sample motor inventory data");
-  };
-
-  const handleClearAll = () => {
-    updateLocalData([]);
-    setIsClearConfirmOpen(false);
-    setSelectedHpFilter("ALL");
-    setSearchQuery("");
-    toast.info("Cleared all motor inventory data");
-  };
-
   const handleExportJson = () => {
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
       JSON.stringify(groupedData, null, 2)
@@ -725,52 +676,8 @@ export default function ManageMotorsPage() {
     toast.success("Exported motor inventory JSON");
   };
 
-  const handleTriggerImport = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const parsed = JSON.parse(event.target?.result as string);
-        if (Array.isArray(parsed)) {
-          updateLocalData(parsed);
-          toast.success("Motor inventory imported successfully");
-        } else {
-          toast.error("Invalid file format: expected an array of HP categories");
-        }
-      } catch (err) {
-        toast.error("Failed to parse JSON file");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
-  if (!isLocalLoaded && isApiLoading) {
-    return (
-      <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center min-h-[50vh] gap-3">
-        <Zap className="h-8 w-8 animate-pulse text-primary" />
-        <p>Loading motor inventory...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto py-6 space-y-6 max-w-7xl">
-      {/* Hidden file input for import */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept=".json"
-        className="hidden"
-      />
-
       {/* ------------------------------------------------------------------ */}
       {/* Header & Main Actions */}
       {/* ------------------------------------------------------------------ */}
@@ -778,38 +685,39 @@ export default function ManageMotorsPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-lg bg-primary/10 text-primary">
-              <Zap className="h-6 w-6" />
+              <Boxes className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold tracking-tight">
                   Manage Motors & Serials
                 </h1>
-                {isUsingBackend ? (
-                  <Badge
-                    variant="outline"
-                    className="text-[11px] gap-1 border-emerald-500/30 text-emerald-600 bg-emerald-500/10"
-                  >
-                    <Database className="h-3 w-3" /> Backend Live
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="text-[11px] gap-1 border-amber-500/30 text-amber-600 bg-amber-500/10"
-                    title="Database is offline/unreachable; using local storage"
-                  >
-                    <CloudOff className="h-3 w-3" /> Local / Offline Mode
-                  </Badge>
-                )}
+                <Badge
+                  variant="outline"
+                  className="text-[11px] gap-1 border-emerald-500/30 text-emerald-600 bg-emerald-500/10"
+                >
+                  <Database className="h-3 w-3" /> Live Backend
+                </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Track motor models and serial numbers organized by Horsepower (HP)
+                Live motor inventory, models, and serial numbers grouped by Horsepower (HP)
               </p>
             </div>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={() => handleOpenScanner()}
+            variant="outline"
+            disabled={availableModelsForScanner.length === 0}
+            className="gap-1.5 border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-600"
+            title="Scan barcodes with device camera"
+          >
+            <Camera className="h-4 w-4 text-amber-500" />
+            Scan Barcodes
+          </Button>
+
           <Button
             onClick={handleOpenAddHp}
             variant="outline"
@@ -826,33 +734,48 @@ export default function ManageMotorsPage() {
             <Plus className="h-4 w-4" /> Add Model
           </Button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" title="More options">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={handleExportJson}>
-                <Download className="mr-2 h-4 w-4" /> Export JSON
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleTriggerImport}>
-                <Upload className="mr-2 h-4 w-4" /> Import JSON
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setIsResetConfirmOpen(true)}>
-                <RotateCcw className="mr-2 h-4 w-4" /> Reset Sample Data
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setIsClearConfirmOpen(true)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Clear All Motors
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleExportJson}
+            title="Export JSON"
+            disabled={groupedData.length === 0}
+          >
+            <Download className="h-4 w-4" />
+          </Button>
         </div>
       </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Backend Error Banner (if any) */}
+      {/* ------------------------------------------------------------------ */}
+      {isError && (
+        <Card className="border-destructive/40 bg-destructive/5 shadow-none">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-destructive">
+                  Error connecting to motor inventory backend
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {apiError instanceof Error
+                    ? apiError.message
+                    : "Please ensure billing-backend is running on port 8000 and database migrations are applied."}
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => refetch()}
+              className="gap-1.5 shrink-0"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ------------------------------------------------------------------ */}
       {/* Quick Stats Bar */}
@@ -956,27 +879,41 @@ export default function ManageMotorsPage() {
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Empty State: No Data at all */}
+      {/* Loading Spinner */}
       {/* ------------------------------------------------------------------ */}
-      {groupedData.length === 0 && (
-        <Card className="py-12 border-dashed">
+      {isLoading && (
+        <div className="py-16 text-center text-muted-foreground flex flex-col items-center justify-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm font-medium">Fetching motor inventory from backend...</p>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Empty State: No data in live database */}
+      {/* ------------------------------------------------------------------ */}
+      {!isLoading && groupedData.length === 0 && (
+        <Card className="py-16 border-dashed">
           <CardContent className="flex flex-col items-center justify-center text-center space-y-4">
-            <div className="p-4 rounded-full bg-muted">
-              <Zap className="h-8 w-8 text-muted-foreground" />
+            <div className="p-3 rounded-full bg-primary/10 text-primary">
+              <Boxes className="h-8 w-8" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-semibold text-lg">No HP categories found</h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                Get started by adding your first HP range (e.g. 0.5 HP, 1.0 HP) or
-                load sample data.
+              <h3 className="font-semibold text-lg">No motors in database</h3>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Your live motor inventory is currently empty. Add your first HP
+                category, register a model, or scan barcodes to begin.
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleOpenAddHp} className="gap-1.5">
-                <Plus className="h-4 w-4" /> Add HP Range
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleOpenAddHp}>
+                <Plus className="h-4 w-4 mr-1.5" /> Add HP Range
               </Button>
-              <Button onClick={handleResetSampleData} variant="outline">
-                <RotateCcw className="h-4 w-4 mr-1.5" /> Load Sample Data
+              <Button
+                onClick={() => handleOpenScanner()}
+                variant="outline"
+                className="border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
+              >
+                <Camera className="h-4 w-4 mr-1.5 text-amber-500" /> Scan Barcodes
               </Button>
             </div>
           </CardContent>
@@ -986,7 +923,7 @@ export default function ManageMotorsPage() {
       {/* ------------------------------------------------------------------ */}
       {/* Empty State: Search yielded no matches */}
       {/* ------------------------------------------------------------------ */}
-      {groupedData.length > 0 && filteredData.length === 0 && (
+      {!isLoading && groupedData.length > 0 && filteredData.length === 0 && (
         <Card className="py-12 border-dashed">
           <CardContent className="flex flex-col items-center justify-center text-center space-y-3">
             <div className="p-3 rounded-full bg-muted">
@@ -1015,228 +952,217 @@ export default function ManageMotorsPage() {
       {/* ------------------------------------------------------------------ */}
       {/* HP Sections List */}
       {/* ------------------------------------------------------------------ */}
-      <div className="space-y-6">
-        {filteredData.map((hp) => {
-          const totalHpSerials = hp.models.reduce(
-            (acc, m) => acc + m.serials.length,
-            0
-          );
+      {!isLoading && (
+        <div className="space-y-6">
+          {filteredData.map((hp) => {
+            const totalHpSerials = hp.models.reduce(
+              (acc, m) => acc + m.serials.length,
+              0
+            );
 
-          return (
-            <Card
-              key={hp.hp}
-              className="border shadow-xs overflow-hidden transition-all duration-200"
-            >
-              {/* HP Category Header */}
-              <CardHeader className="bg-muted/30 border-b py-3 px-5 flex flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-amber-500 font-bold text-lg">⚡</span>
-                    <CardTitle className="text-lg font-bold tracking-tight">
-                      {hp.hp}
-                    </CardTitle>
+            return (
+              <Card
+                key={hp.hp}
+                className="border shadow-xs overflow-hidden transition-all duration-200"
+              >
+                {/* HP Category Header */}
+                <CardHeader className="bg-muted/30 border-b py-3 px-5 flex flex-row items-center justify-between space-y-0">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-amber-500 font-bold text-lg">⚡</span>
+                      <CardTitle className="text-lg font-bold tracking-tight">
+                        {hp.hp}
+                      </CardTitle>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="secondary" className="text-xs font-medium">
+                        {hp.models.length}{" "}
+                        {hp.models.length === 1 ? "Model" : "Models"}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="text-xs font-medium border-amber-500/30 text-amber-600 bg-amber-500/10"
+                      >
+                        {totalHpSerials}{" "}
+                        {totalHpSerials === 1 ? "Serial" : "Serials"}
+                      </Badge>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <Badge variant="secondary" className="text-xs font-medium">
-                      {hp.models.length}{" "}
-                      {hp.models.length === 1 ? "Model" : "Models"}
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className="text-xs font-mono font-medium"
-                    >
-                      {totalHpSerials}{" "}
-                      {totalHpSerials === 1 ? "Unit" : "Units"}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* HP Actions */}
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-xs gap-1"
-                    onClick={() => handleOpenAddModel(hp.hp)}
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Add Model
-                  </Button>
-
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                    title="Edit HP Rating"
-                    onClick={() => handleOpenEditHp(hp)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    title="Delete HP Category"
-                    onClick={() => setDeleteHpTarget(hp)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </CardHeader>
-
-              {/* Models Content */}
-              <CardContent className="p-5 space-y-4">
-                {hp.models.length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground border border-dashed rounded-lg flex flex-col items-center justify-center gap-2">
-                    <Package className="h-6 w-6 text-muted-foreground/60" />
-                    <p className="text-sm">
-                      No models added under {hp.hp} yet.
-                    </p>
+                  {/* HP Category Actions */}
+                  <div className="flex items-center gap-1">
                     <Button
                       size="sm"
-                      variant="secondary"
-                      className="h-7 text-xs gap-1 mt-1"
+                      variant="ghost"
+                      className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
                       onClick={() => handleOpenAddModel(hp.hp)}
+                      title={`Add model under ${hp.hp}`}
                     >
-                      <Plus className="h-3.5 w-3.5" /> Add First Model
+                      <Plus className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Add Model</span>
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => handleOpenEditHp(hp)}
+                      title="Edit HP Rating"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => setDeleteHpTarget(hp)}
+                      title="Delete HP Category"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {hp.models.map((model) => {
-                      const isModelCopied = copiedModelId === model.id;
+                </CardHeader>
+
+                {/* Models List */}
+                <CardContent className="p-0 divide-y">
+                  {hp.models.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-muted-foreground space-y-2">
+                      <p>No motor models added under {hp.hp} yet.</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenAddModel(hp.hp)}
+                        className="h-7 text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Add Model
+                      </Button>
+                    </div>
+                  ) : (
+                    hp.models.map((model) => {
                       const currentSerialInput = serialInputs[model.id] || "";
+                      const isCopied = copiedModelId === model.id;
 
                       return (
                         <div
                           key={model.id}
-                          className="border rounded-lg p-4 bg-background/50 hover:bg-background/80 transition-colors space-y-3"
+                          className="p-5 hover:bg-muted/10 transition-colors space-y-3.5"
                         >
-                          {/* Model Title & Controls */}
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2.5">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-semibold text-base text-foreground">
+                          {/* Model Title Row */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className="font-semibold text-base text-foreground tracking-tight flex items-center gap-2">
+                                <Package className="h-4 w-4 text-muted-foreground" />
                                 {model.name}
-                              </span>
+                              </div>
 
                               <Badge
-                                variant={
-                                  model.serials.length > 0
-                                    ? "outline"
-                                    : "destructive"
-                                }
-                                className="text-xs font-mono font-normal"
+                                variant="secondary"
+                                className="font-mono text-xs font-normal"
                               >
-                                {model.serials.length} available
+                                {model.serials.length}{" "}
+                                {model.serials.length === 1 ? "unit" : "units"}
                               </Badge>
                             </div>
 
-                            <div className="flex items-center gap-1 self-end sm:self-auto">
-                              {model.serials.length > 0 && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
-                                  onClick={() => handleCopySerials(model)}
-                                  title="Copy all serials as comma-separated text"
-                                >
-                                  {isModelCopied ? (
-                                    <>
-                                      <Check className="h-3 w-3 text-emerald-500" />
-                                      <span className="text-emerald-500">
-                                        Copied
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy className="h-3 w-3" />
-                                      <span>Copy Serials</span>
-                                    </>
-                                  )}
-                                </Button>
-                              )}
-
+                            {/* Model Actions */}
+                            <div className="flex items-center gap-1">
                               <Button
-                                size="icon"
+                                size="sm"
                                 variant="ghost"
-                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                onClick={() =>
-                                  handleOpenEditModel(hp.hp, model)
-                                }
-                                title="Edit model"
+                                className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                onClick={() => handleCopySerials(model)}
+                                title="Copy all serials to clipboard"
                               >
-                                <Pencil className="h-3 w-3" />
+                                {isCopied ? (
+                                  <>
+                                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                    <span className="text-emerald-600 text-[11px]">
+                                      Copied
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-3.5 w-3.5" />
+                                    <span className="text-[11px] hidden sm:inline">
+                                      Copy Serials
+                                    </span>
+                                  </>
+                                )}
                               </Button>
 
                               <Button
-                                size="icon"
+                                size="sm"
                                 variant="ghost"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                onClick={() => handleOpenEditModel(hp.hp, model)}
+                                title="Edit Model"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                                 onClick={() =>
                                   setDeleteModelTarget({ hp: hp.hp, model })
                                 }
-                                title="Delete model"
+                                title="Delete Model"
                               >
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </div>
 
-                          {/* Serial Numbers Badge Display */}
+                          {/* Serials Badges Flow */}
                           <div className="space-y-2">
                             <div className="text-xs font-medium text-muted-foreground flex items-center justify-between">
                               <span>Serial Numbers:</span>
-                              <span className="text-[11px] text-muted-foreground/80">
-                                Click &apos;×&apos; on any badge to delete
-                              </span>
+                              {model.serials.length > 0 && (
+                                <span className="text-[11px] font-mono text-muted-foreground/80">
+                                  Click &times; on any badge to delete
+                                </span>
+                              )}
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-1.5 min-h-[32px]">
+                            <div className="flex flex-wrap items-center gap-1.5 min-h-[32px] p-2.5 rounded-lg bg-muted/25 border border-dashed">
                               {model.serials.length === 0 ? (
-                                <span className="text-xs text-muted-foreground italic">
-                                  No serials tracked. Enter one below to add.
+                                <span className="text-xs text-muted-foreground/70 italic">
+                                  No serials recorded yet. Type below or scan barcodes to add.
                                 </span>
                               ) : (
                                 model.serials.map((serial) => {
-                                  const isQueryMatch =
+                                  // Highlight badge if matches active search
+                                  const isMatched =
                                     searchQuery.trim() &&
                                     serial
                                       .toLowerCase()
-                                      .includes(
-                                        searchQuery.trim().toLowerCase()
-                                      );
+                                      .includes(searchQuery.toLowerCase().trim());
 
                                   return (
                                     <Badge
                                       key={serial}
-                                      variant={
-                                        isQueryMatch ? "default" : "outline"
-                                      }
-                                      className={`font-mono text-xs px-2.5 py-1 gap-1.5 transition-all select-all flex items-center ${
-                                        isQueryMatch
-                                          ? "bg-amber-500 text-black font-semibold border-amber-600 shadow-xs"
-                                          : "bg-muted/40 hover:bg-muted text-foreground border-border/80"
+                                      variant={isMatched ? "default" : "outline"}
+                                      className={`group font-mono text-xs font-medium px-2.5 py-0.5 rounded-md gap-1 transition-all ${
+                                        isMatched
+                                          ? "ring-2 ring-primary ring-offset-1"
+                                          : "bg-background border-border/80 hover:border-foreground/40 text-foreground"
                                       }`}
                                     >
                                       <span>{serial}</span>
                                       <button
                                         type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
+                                        onClick={() =>
                                           handleRemoveSerial(
                                             hp.hp,
                                             model.id,
                                             serial
-                                          );
-                                        }}
-                                        className={`rounded-full p-0.5 transition-colors focus:outline-hidden ${
-                                          isQueryMatch
-                                            ? "hover:bg-black/20 text-black"
-                                            : "text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
-                                        }`}
+                                          )
+                                        }
+                                        className="rounded-full hover:bg-destructive/20 hover:text-destructive p-0.5 -mr-1 transition-colors focus:outline-hidden"
                                         title={`Delete serial ${serial}`}
-                                        aria-label={`Delete serial ${serial}`}
                                       >
                                         <X className="h-3 w-3" />
                                       </button>
@@ -1245,30 +1171,22 @@ export default function ManageMotorsPage() {
                                 })
                               )}
                             </div>
-                          </div>
 
-                          {/* Quick Add Serial Input */}
-                          <div className="pt-1">
+                            {/* Inline Serial Number Input Form */}
                             <form
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                handleAddSerial(hp.hp, model.id);
-                              }}
-                              className="flex items-center gap-2 max-w-md"
+                              onSubmit={(e) =>
+                                handleAddSerial(e, hp.hp, model.id)
+                              }
+                              className="flex items-center gap-2 pt-1 max-w-lg"
                             >
-                              <div className="relative flex-1">
-                                <Input
-                                  value={currentSerialInput}
-                                  onChange={(e) =>
-                                    setSerialInputs((prev) => ({
-                                      ...prev,
-                                      [model.id]: e.target.value,
-                                    }))
-                                  }
-                                  placeholder="Type serial # & press Enter (e.g. SN-1024)..."
-                                  className="h-8 text-xs font-mono"
-                                />
-                              </div>
+                              <Input
+                                value={currentSerialInput}
+                                onChange={(e) =>
+                                  handleSerialInputChange(model.id, e.target.value)
+                                }
+                                placeholder="Type or paste serials (e.g. SN-9901, SN-9902)..."
+                                className="h-8 text-xs font-mono"
+                              />
                               <Button
                                 type="submit"
                                 size="sm"
@@ -1278,274 +1196,140 @@ export default function ManageMotorsPage() {
                               >
                                 <Plus className="h-3.5 w-3.5" /> Add Serial
                               </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-2.5 text-xs gap-1 shrink-0 border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-600"
+                                onClick={() => handleOpenScanner(model.id)}
+                                title="Scan serials with device camera"
+                              >
+                                <Camera className="h-3.5 w-3.5 text-amber-500" />
+                                <span className="hidden sm:inline">Scan</span>
+                              </Button>
                             </form>
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                              Tip: You can paste multiple serials separated by
-                              commas or spaces.
-                            </p>
                           </div>
                         </div>
                       );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                    })
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* Dialog: Add HP Range */}
+      {/* Modal: Add HP Category */}
       {/* ------------------------------------------------------------------ */}
       <Dialog open={isAddHpOpen} onOpenChange={setIsAddHpOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add HP Range / Rating</DialogTitle>
-            <DialogDescription>
-              Enter the motor horsepower category (e.g., 0.75 HP, 2.0 HP, 3-5 HP).
-            </DialogDescription>
-          </DialogHeader>
+          <form onSubmit={handleAddHp}>
+            <DialogHeader>
+              <DialogTitle>Add Horsepower (HP) Range</DialogTitle>
+              <DialogDescription>
+                Create a new motor power rating category (e.g. 1.5 HP, 2.0 HP,
+                5.0 HP).
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="hp-name">HP Rating / Name</Label>
-              <Input
-                id="hp-name"
-                value={newHpName}
-                onChange={(e) => setNewHpName(e.target.value)}
-                placeholder="e.g. 0.75 HP or 15 HP"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleConfirmAddHp();
-                  }
-                }}
-                autoFocus
-              />
-            </div>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">HP Rating / Name</label>
+                <Input
+                  value={newHpName}
+                  onChange={(e) => setNewHpName(e.target.value)}
+                  placeholder="e.g. 3.0 HP"
+                  autoFocus
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">
-                Or pick a common preset:
-              </Label>
-              <div className="flex flex-wrap gap-1.5">
-                {HP_PRESETS.map((preset) => {
-                  const alreadyExists = groupedData.some(
-                    (d) => d.hp.toLowerCase() === preset.toLowerCase()
-                  );
-                  return (
+              {/* Quick Presets */}
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground font-medium">
+                  Quick suggestions:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {HP_PRESETS.map((preset) => (
                     <Button
                       key={preset}
                       type="button"
                       size="sm"
-                      variant={newHpName === preset ? "default" : "outline"}
-                      disabled={alreadyExists}
-                      className="h-7 text-xs px-2.5"
+                      variant="outline"
+                      className="h-6 text-[11px] px-2 py-0"
                       onClick={() => setNewHpName(preset)}
                     >
                       {preset}
-                      {alreadyExists && (
-                        <span className="text-[9px] ml-1 opacity-60">
-                          (added)
-                        </span>
-                      )}
                     </Button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsAddHpOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => handleConfirmAddHp()}
-              disabled={!newHpName.trim()}
-            >
-              Add HP Category
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddHpOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!newHpName.trim()}>
+                Add Category
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Dialog: Edit HP Category */}
+      {/* Modal: Edit HP Category */}
       {/* ------------------------------------------------------------------ */}
       <Dialog
         open={Boolean(editHpTarget)}
         onOpenChange={(open) => !open && setEditHpTarget(null)}
       >
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit HP Rating</DialogTitle>
-            <DialogDescription>
-              Rename this horsepower category.
-            </DialogDescription>
-          </DialogHeader>
+          <form onSubmit={handleEditHp}>
+            <DialogHeader>
+              <DialogTitle>Edit HP Category</DialogTitle>
+              <DialogDescription>
+                Rename &quot;{editHpTarget?.hp}&quot;. All models under this
+                category will be updated.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-2 py-2">
-            <Label htmlFor="edit-hp-name">HP Rating</Label>
-            <Input
-              id="edit-hp-name"
-              value={editHpName}
-              onChange={(e) => setEditHpName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleSaveEditHp();
-                }
-              }}
-              autoFocus
-            />
-          </div>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">HP Rating</label>
+                <Input
+                  value={editHpName}
+                  onChange={(e) => setEditHpName(e.target.value)}
+                  placeholder="e.g. 2.0 HP"
+                  autoFocus
+                />
+              </div>
+            </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setEditHpTarget(null)}
-            >
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleSaveEditHp}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Dialog: Add Model */}
-      {/* ------------------------------------------------------------------ */}
-      <Dialog open={isAddModelOpen} onOpenChange={setIsAddModelOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Motor Model</DialogTitle>
-            <DialogDescription>
-              Add a new motor model and optionally seed its serial numbers.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="target-hp">Select HP Rating</Label>
-              <Select
-                value={targetHpForModel}
-                onValueChange={setTargetHpForModel}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditHpTarget(null)}
               >
-                <SelectTrigger id="target-hp">
-                  <SelectValue placeholder="Select HP..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {groupedData.map((hp) => (
-                    <SelectItem key={hp.hp} value={hp.hp}>
-                      {hp.hp} ({hp.models.length} models)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="model-name">Model Name *</Label>
-              <Input
-                id="model-name"
-                value={newModelName}
-                onChange={(e) => setNewModelName(e.target.value)}
-                placeholder="e.g. Mini Sapphire II or KDS-112++"
-                autoFocus
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="initial-serials">
-                Initial Serial Numbers (Optional)
-              </Label>
-              <Input
-                id="initial-serials"
-                value={newModelSerials}
-                onChange={(e) => setNewModelSerials(e.target.value)}
-                placeholder="Comma or space separated (e.g. SN-101, SN-102)"
-                className="font-mono text-xs"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                You can also add serial badges one-by-one anytime after creating
-                the model.
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsAddModelOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleConfirmAddModel}
-              disabled={!newModelName.trim() || !targetHpForModel}
-            >
-              Add Model
-            </Button>
-          </DialogFooter>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!editHpName.trim()}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Dialog: Edit Model */}
-      {/* ------------------------------------------------------------------ */}
-      <Dialog
-        open={Boolean(editModelTarget)}
-        onOpenChange={(open) => !open && setEditModelTarget(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Model</DialogTitle>
-            <DialogDescription>
-              Update model name.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="edit-model-name">Model Name</Label>
-              <Input
-                id="edit-model-name"
-                value={editModelName}
-                onChange={(e) => setEditModelName(e.target.value)}
-                autoFocus
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setEditModelTarget(null)}
-            >
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleSaveEditModel}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Alert Dialog: Delete HP Category */}
+      {/* Alert Dialog: Confirm Delete HP Category */}
       {/* ------------------------------------------------------------------ */}
       <AlertDialog
         open={Boolean(deleteHpTarget)}
@@ -1553,14 +1337,11 @@ export default function ManageMotorsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Delete {deleteHpTarget?.hp} category?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Delete {deleteHpTarget?.hp} category?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the <strong>{deleteHpTarget?.hp}</strong>{" "}
-              category along with all its{" "}
-              <strong>{deleteHpTarget?.models.length} model(s)</strong> and
-              associated serial numbers. This action cannot be undone.
+              This will permanently delete this HP category, all of its models (
+              {deleteHpTarget?.models.length || 0}), and all associated serial
+              numbers from the database.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1576,7 +1357,151 @@ export default function ManageMotorsPage() {
       </AlertDialog>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Alert Dialog: Delete Model */}
+      {/* Modal: Add Motor Model */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog open={isAddModelOpen} onOpenChange={setIsAddModelOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <form onSubmit={handleAddModel}>
+            <DialogHeader>
+              <DialogTitle>Add Motor Model</DialogTitle>
+              <DialogDescription>
+                Register a new motor model and optionally assign initial serial
+                numbers.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* HP Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">HP Category</label>
+                <Select
+                  value={targetHpForModel}
+                  onValueChange={setTargetHpForModel}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select HP range..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groupedData.map((hp) => (
+                      <SelectItem key={hp.hp} value={hp.hp}>
+                        {hp.hp} ({hp.models.length} models)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Model Name */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Model Name</label>
+                <Input
+                  value={newModelName}
+                  onChange={(e) => setNewModelName(e.target.value)}
+                  placeholder="e.g. AFS007S+B10 or ASMSP1570B"
+                  autoFocus
+                />
+              </div>
+
+              {/* Optional Initial Serials */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center justify-between">
+                  <span>Initial Serial Numbers</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    Optional
+                  </span>
+                </label>
+                <Input
+                  value={newModelSerialsInput}
+                  onChange={(e) => setNewModelSerialsInput(e.target.value)}
+                  placeholder="Enter serial numbers separated by commas or spaces..."
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  You can also add more serials at any time or scan barcodes directly.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddModelOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!newModelName.trim() || !targetHpForModel}
+              >
+                Add Model
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Modal: Edit Motor Model */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog
+        open={Boolean(editModelTarget)}
+        onOpenChange={(open) => !open && setEditModelTarget(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleEditModel}>
+            <DialogHeader>
+              <DialogTitle>Edit Motor Model</DialogTitle>
+              <DialogDescription>
+                Update the model name or reassign it to another HP category.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">HP Category</label>
+                <Select value={editModelHp} onValueChange={setEditModelHp}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select HP..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groupedData.map((hp) => (
+                      <SelectItem key={hp.hp} value={hp.hp}>
+                        {hp.hp}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Model Name</label>
+                <Input
+                  value={editModelName}
+                  onChange={(e) => setEditModelName(e.target.value)}
+                  placeholder="e.g. AFS007S+B10"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditModelTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!editModelName.trim()}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Alert Dialog: Confirm Delete Model */}
       {/* ------------------------------------------------------------------ */}
       <AlertDialog
         open={Boolean(deleteModelTarget)}
@@ -1585,14 +1510,12 @@ export default function ManageMotorsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete model &quot;{deleteModelTarget?.model.name}&quot;?
+              Delete {deleteModelTarget?.model.name}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove this model and all{" "}
-              <strong>
-                {deleteModelTarget?.model.serials.length} serial numbers
-              </strong>{" "}
-              tracked under it.
+              Are you sure you want to delete this model and all of its{" "}
+              {deleteModelTarget?.model.serials.length || 0} serial numbers from
+              the database? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1608,55 +1531,16 @@ export default function ManageMotorsPage() {
       </AlertDialog>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Alert Dialog: Confirm Reset Sample Data */}
+      {/* Camera Barcode Scanner Modal */}
       {/* ------------------------------------------------------------------ */}
-      <AlertDialog
-        open={isResetConfirmOpen}
-        onOpenChange={setIsResetConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset to default sample data?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will overwrite your current motor list with the default sample
-              motors and serial numbers. Any unsaved custom entries will be lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetSampleData}>
-              Reset Data
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Alert Dialog: Confirm Clear All */}
-      {/* ------------------------------------------------------------------ */}
-      <AlertDialog
-        open={isClearConfirmOpen}
-        onOpenChange={setIsClearConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear all motor inventory?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove all HP categories, models, and serial
-              numbers? You will start with a blank list.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleClearAll}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Clear All
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CameraBarcodeScanner
+        open={isScannerOpen}
+        onOpenChange={setIsScannerOpen}
+        availableModels={availableModelsForScanner}
+        initialModelId={scannerTargetModelId}
+        onAddSerials={handleScannerAddSerials}
+        onAddParsedBatch={handleScannerAddParsedBatch}
+      />
     </div>
   );
 }
